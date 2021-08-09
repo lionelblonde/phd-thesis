@@ -1,0 +1,125 @@
+%!TEX root = ../../main.tex
+
+% abstract
+
+\thispagestyle{empty}
+\chapter*{Abstract}
+% \addcontentsline{toc}{chapter}{Abstract}
+
+The research endeavours laid out in this thesis set out to
+address weaknesses of reinforcement learning.
+As the branch of machine learning that orchestrates a
+reward-driven decision maker that must learn from its evolving world
+via interaction, reinforcement learning relies heavily on said reward's design.
+Modelling a reinforcement signal able to convey the right incentive to the agent
+for it to carry out the task at hand is far from obvious, and overall fairly tedious
+in terms of engineering and tweaking required.
+Besides, the interactive nature of the domain puts the agent and its world at satefy risk.
+The longer it takes to iterate over and empirically validate reward designs,
+the less sensible the suffered costs gradually become.
+Imitation learning bypasses this time-consuming hurdle by enticing the agent to mimic an expert
+instead of trying to maximize a potentially ill-designed reward signal.
+In effect, the shift from reinforcement to imitation learning trades the reward feedback the
+agent receives upon interaction off for the access to
+a dataset describing how an expert decision-making policy
+--- assumed to perform optimally at the task --- maps situations to decisions.
+Depite alleviating the reliance on potentially satefty-critical reward modelling,
+state-of-the-art imitation learning agents still suffered from severe sample-inefficiency in the
+number of interactions that need be carried out in the environment.
+
+\emph{%
+As such, we first set out to address the high sample complexity
+suffered by Generative Adversarial Imitation Learning, the state-of-the-art approach
+to performing imitation (albeit sample-inefficient).
+To that end, we build on the strengths of off-policy learning
+to design a novel adversarial imitation approach.
+Albeit coordinating infamously unstable routines --- adversarial learning, and off-policy learning ---
+our novel method remains remarkably stable, and dramatically shrinks the amount of interactions with the
+environment necessary to learn well-behaved imitation policies,
+by up to several orders of magnitude.
+}
+
+\emph{%
+In an attempt to decipher and ultimately understand what made
+the previous method so stable in practice despite overwhelming odds of instability, we
+perform an in-depth review, qualitative and quantitative, of the method.
+We show that forcing the adversarially learned reward function to be local Lipschitz-continuous
+is a \textit{sine qua non} condition for the method to perform well.
+We then study the effects of this necessary condition and provide several theoretical results
+involving the local Lipschitzness of the state-value function.
+We complement these guarantees with empirical evidence attesting to the strong
+positive effect that the consistent satisfaction of the Lipschitzness constraint on the reward has
+on imitation performance.
+Finally, we tackle a generic pessimistic reward preconditioning add-on
+spawning a large class of reward shaping methods, which
+makes the base method it is plugged into provably more robust, as shown in several
+additional theoretical guarantees.
+We then discuss these through a fine-grained lens and share our insights.
+Crucially, the derived guarantees are valid for \emph{any} reward
+satisfying the Lipschitzness condition, nothing is specific to imitation.
+As such, these may be of independent interest.
+}
+
+While imitation learning seems difficult to outperform
+once the agent has access to past experiences from an expert behaving optimally,
+the performance of the mimicking agent quickly deteriorates as the expert stray from optimality.
+Intuitively, it stands to reason that the agent should only imitate another if the latter
+solves the task (near-) optimally. If not, then imitation is not a well suited approach.
+
+Datasets of optimal interactive experiences are difficult to come by,
+and deterringly tedious to design from scratch.
+Even then, these rarely perfectly align with the practitioner's desiderata for the set task.
+As a relaxation, interaction traces of sub-optimal behaviors for closely related (yet not exactly aligned) tasks
+are far more readily available
+(\textit{e.g.}~due to continually recording sensors present in robots, cars).
+As such, after studying how to \emph{only learn from an external source} of \emph{putatively optimal} data coming
+from an expert policy, we then study how to \emph{only learn from an external source} of
+\emph{putatively sub-optimal} data provided through a arbitrary dataset ---
+this last one is the \emph{offline} reinforcement learning setting.
+
+While in the imitation learning setting we had no reward from the environment,
+we were still able to interact with the environment.
+In the offline reinforcement learning setting, the situation is reversed.
+The agent has access to logged interactive experiences from external sources, typically distinct agents.
+Said dataset of interactive traces is annotated with rewards perceived by the agents upon interaction.
+Yet, the agent learned via offline reinforcement learning
+is not allowed to interact with the world, and is therefore unable to witness its \emph{own} impact on it when trying
+to make better decisions in it.
+
+\emph{%
+The performance of state-of-the-art baselines in the offline reinforcement learning regime varies widely over the
+spectrum of dataset qualities --- ranging from \textit{``far-from-optimal''} random data
+to \textit{``close-to-optimal''} expert demonstrations.
+We re-implement these under a fair, unified, and highly factorized framework,
+and show that when a given baseline outperforms its competing counterparts
+on one end of the spectrum, it \emph{never} does on the other end.
+This consistent trend prevents us from naming a victor that outperforms the rest across the board.
+We attribute the asymmetry in performance between the two ends of the quality spectrum to
+the amount of inductive bias injected into the agent to entice it to posit that what the behavior underlying
+the offline dataset is \emph{optimal} for the task.
+The more bias is injected, the higher the agent performs, \emph{provided the dataset is close-to-optimal}.
+Otherwise, its effect is brutally detrimental.
+Adopting an advantage-weighted regression template as base, we conduct an investigation which corroborates that
+injections of such \emph{optimality} inductive bias, when not done parsimoniously,
+makes the agent subpar in the datasets it was dominant as soon as the offline policy is sub-optimal.
+To design methods that perform well across the whole spectrum,
+we revisit the generalized policy iteration scheme for the offline regime, and study the impact of nine distinct
+newly-introduced proposal distributions over actions, involved in the proposed generalization of the
+policy evaluation and policy improvement update rules.
+We show that certain orchestrations strike the right balance and can improve the performance on one end of the spectrum
+\emph{without} harming it on the other end.
+}
+
+In neither of the two studied settings
+(\textit{a)} imitation learning and \textit{b)} offline reinforcement learning)
+does the agent receive direct reward feedback from the world
+about the quality of the decisions it makes.
+It is never told \emph{how well} it performed, and must infer how well it performed from
+traces of other policies, which \textit{a priori} do not align with what the decision maker would have done.
+In that light, both studied settings
+can be cast as counterfactual learning,
+in which sequential decision-making agents must learn how to interact with their world,
+only from traces that \textit{a priori} do not coincide with their own.
+\textit{In fine}, we are concerned with decision makers that learn from the choices of others.
+
+

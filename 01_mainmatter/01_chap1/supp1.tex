@@ -1,0 +1,186 @@
+%!TEX root = ../../main.tex
+
+% supp1
+
+\section{Studied environments}
+\label{studiedenvs}
+
+The environments we dealt with were provided through the OpenAI Gym
+\cite{Brockman2016-un} API, building on the \textsc{MuJoCo} physics engine
+\cite{Todorov2012-gc}, to model physical interactive scenarios between
+an agent and the environment she is thrown into.
+The control tasks modelled by the environments involve locomotion tasks as
+well as tasks in which the agent must reach and remain in a state of dynamic
+balance.
+
+\begin{figure}[!h]
+  \centering
+  \begin{tabular}{|ccc|}
+    \hline
+    Environment&$s$ DoFs&$a$ DoFs\\
+    \hline
+    InvertedPendulum-v2&$4$&$1$\\
+    InvertedDoublePendulum-v2&$11$&$1$\\
+    Reacher-v2&$11$&$2$\\
+    Hopper-v2&$11$&$3$\\
+    Walker2d-v2&$17$&$6$\\
+    \hline
+  \end{tabular}
+  \caption{Degrees of freedom (DoF) of the considered \textsc{MuJoCo}
+  simulated environments.
+  DoFs of both continuous action and state spaces are presented, for the
+  studied physical control tasks.
+  Actions spaces are bounded along every dimension, while the state spaces are
+  unbounded.}
+  \label{envtablesam}
+\end{figure}
+
+\section{Reward function variants}
+
+The reward is defined as the negative of the generator loss.
+As for the latter, the former can be stated in two variants,
+the saturating version and the non-saturating version, respectively
+\begin{align}
+  r_\phi^\smallfrown(s_t, a_t) & = - \log (1 - D_\phi(s_t, a_t))
+  \\
+  r_\phi^\smallsmile(s_t, a_t) & = \log D_\phi(s_t, a_t)
+  \label{eq:rewards}
+\end{align}
+The non-saturating alternative is recommended in the original GAN paper as well
+as in \cite{Fedus2018-bk} more recently, as the generator loss suffers from
+vanishing gradients only in areas where the generated samples are already close
+to the real data.
+GAIL relies on policy optimization to update the generator, which makes this
+vanishing gradient argument vacuous.
+Besides, in the context of simulated locomotion environments, the
+saturated version proved to prevail in our experiments, as our agents were
+unable to overcome the extremely low rewards incurred early in training when
+using the non-saturating rewards.
+With the saturated version, signals obtained in early failure cases were close
+to zero, which was more numerically forgiving for our agents to kick off.
+
+\section{Experimental setup}
+
+Both our algorithm and GAIL baseline model implement the MPI interface:
+each experiment has
+been launched concurrently with X parallel workers
+(each with its own random seed),
+each having its own
+interaction with the environment, its own replay buffer, its own optimisers
+and its own network updates.
+However, every iteration and for a given network,
+the gradients of the X \textsc{Adam}
+\cite{Kingma2014-op} optimisers are pulled together, averaged, and a unique
+average gradient is distributed to the worker for immediate usage.
+In the experiments reported in this paper, we used 4 parallel workers.
+
+Our experiments have all been conducted on a single 16-core CPU
+workstation (reference: AMD Ryzen Threadripper\textsuperscript{\textregistered}
+1950X CPU).
+
+\section{Hyperparameters settings}
+
+In our training procedure, we adopted an alternating scheme consisting in
+performing 3 training iterations of the actor-critic architecture for one
+training iteration of the synthetic reward, in line with common practices in
+the GAN literature (the actor-critic acts as generator, while the synthetic
+reward plays the role of discriminator).
+This training pattern applies for both the GAIL baseline and our algorithm,
+SAM.
+
+As supported by the ending discussion of the GAIL paper, performing a
+behavioral cloning \cite{Pomerleau1989-nh, Pomerleau1990-lm}
+pre-training step to warm-start GAIL
+can potentially yield expert-like policies
+in fewer number of ensuing GAIL training iterations.
+It is especially appealing in so far as the behavioral cloning agent
+does not interact with the environment at all while training.
+We therefore intended to precede the training of our experiments
+(for GAIL and SAM) with a behavioral cloning pre-training phase.
+However, although the previous training pipeline enables a reduction of
+training iterations for GAIL, we did not witness a consistent benefit for
+SAM in our preliminary experiments.
+Our proposed explanation of this phenomenon is that by pre-training both policy
+and critic individually as regression problems over the expert demonstrations
+dataset, we hinder the entanglement of the policy and critic training
+procedures exploited in SAM.
+We believe that by adopting a more elaborate pre-training procedure, we will be
+able to overcome this issue, and therefore leave further exploration for future
+work.
+
+\subsection{Generative Adversarial Imitation Learning}
+
+\begin{figure}
+  \center
+  \begin{tabular}{|ll|}
+    \hline
+    Hyperparameter&Value\\
+    \hline
+    number of MPI workers&4\\
+    policy number of layers&2\\
+    policy layer widths&$(100, 100)$\\
+    policy hidden activations&tanh\\
+    discriminator number of layers&2\\
+    discriminator layer widths&$(100, 100)$\\
+    discriminator hidden activations&leaky ReLU\\
+    discount factor $\gamma$&0.995\\
+    generator training steps&3\\
+    discriminator training steps&1\\
+    non-saturating reward?&false\\
+    entropy regularization coefficient $\lambda$&0.\\
+    gradient penalty \cite{Gulrajani2017-mr} coefficient&10.\\
+    one-sided label smoothing&true\\
+    number of interactions per iteration&1024\\
+    minibatch size&128\\
+    normalize observations?&true\\
+    \hline
+  \end{tabular}
+  \caption{Hyperparameters used to train GAIL agents.}
+\end{figure}
+
+\subsection{Sample-efficient Adversarial Mimic}
+
+\begin{figure}
+  \center
+  \begin{tabular}{|ll|}
+    \hline
+    Hyperparameter&Value\\
+    \hline
+    number of MPI workers&4\\
+    policy number of layers&2\\
+    policy layer widths&$(64, 64)$\\
+    policy hidden activations&leaky ReLU\\
+    policy layer normalisation \cite{Ba2016-bs}&true\\
+    policy output activation&tanh\\
+    critic number of layers&2\\
+    critic layer widths&$(64, 64)$\\
+    critic hidden activations&leaky ReLU\\
+    critic layer normalisation&true\\
+    discriminator number of layers&2\\
+    discriminator layer widths&$(64, 64)$\\
+    discriminator hidden activations&leaky ReLU\\
+    discount factor $\gamma$&0.99\\
+    generator training steps&3\\
+    discriminator training steps&1\\
+    non-saturating reward?&false\\
+    entropy regularization coefficient&0.\\
+    gradient penalty \cite{Gulrajani2017-mr} coefficient&10.\\
+    one-sided label smoothing&true\\
+    number of interactions per iteration&4\\
+    minibatch size&32\\
+    number of training steps per iteration&20\\
+    replay buffer size&100K\\
+    normalise observations?&true\\
+    normalise returns?&true\\
+    \textsc{Pop-Art} \cite{Van_Hasselt2016-bh}?&true\\
+    reward scaling factor&1.\\
+    critic weight decay coefficient $\nu$&0.001\\
+    critic $1$-step TD loss coefficient&1\\
+    critic $n$-step TD loss coefficient&1\\
+    TD lookahead length $n$&96\\
+    adaptive parameter noise for $\pi_\theta$&0.2\\
+    Ornstein-Uhlenbeck additive noise&0.2\\
+    \hline
+  \end{tabular}
+  \caption{Hyperparameters used to train SAM agents.}
+\end{figure}

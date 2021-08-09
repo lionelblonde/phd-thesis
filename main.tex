@@ -1,0 +1,158 @@
+% !TEX TS-program = xelatex
+\documentclass[11pt,a4paper,oneside]{book}
+
+% Add 'Contents' and 'Bibliography' sections in ToC
+\usepackage{tocbibind}
+
+% Set page geometry
+\usepackage[width=145mm,top=45mm,bottom=45mm]{geometry}
+
+% Edit chapter title format
+\usepackage[sc]{titlesec}
+\titleformat{\chapter}[display]
+  {\bfseries\LARGE}
+  {\filleft\Large\chaptertitlename~\thechapter}
+  {3ex}
+  {\center\titlerule[1.5pt]\vspace{1.5ex}}
+  [\vspace{1.3ex}\titlerule]
+
+% Increase line spacing using
+\usepackage{setspace}
+\onehalfspacing
+
+% Make 'subsubsection' numbered
+\setcounter{secnumdepth}{3}
+% Make 'subsection' the highest depth represented in ToC
+\setcounter{tocdepth}{2}
+
+% Classic packages from conferences templates
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+
+% Custom packages that I needed on top of the classic ones
+\usepackage{comment}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\DeclareMathOperator*{\argmax}{\arg\!\max}
+\DeclareMathOperator*{\argmin}{\arg\!\min}
+\usepackage{graphicx}
+\usepackage{mathtools}
+\usepackage{dsfont}
+\usepackage[algoruled,boxed,linesnumbered]{algorithm2e}
+\usepackage{parskip}
+\usepackage{textcomp}
+\usepackage{subcaption}
+\usepackage{physics}
+\usepackage[tableposition=top]{caption}
+\usepackage[table,dvipsnames]{xcolor}
+\usepackage{float}
+\usepackage{breakcites}
+\usepackage{import}
+\usepackage{pdfpages}
+
+% Set font
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage[lf]{ebgaramond}
+\usepackage[cmintegrals,cmbraces]{newtxmath}
+% Overwrite 'newtxmath' with the ones (subset) of 'ebgaramond-maths'
+\usepackage{ebgaramond-maths}
+% Create surrogates for symbols missing from 'ebgaramond-maths'
+\makeatletter
+  \DeclareSymbolFont{ntxletters}{OML}{ntxmi}{m}{it}
+  \SetSymbolFont{ntxletters}{bold}{OML}{ntxmi}{b}{it}
+  \re@DeclareMathSymbol{\leftharpoonup}{\mathrel}{ntxletters}{"28}
+  \re@DeclareMathSymbol{\leftharpoondown}{\mathrel}{ntxletters}{"29}
+  \re@DeclareMathSymbol{\rightharpoonup}{\mathrel}{ntxletters}{"2A}
+  \re@DeclareMathSymbol{\rightharpoondown}{\mathrel}{ntxletters}{"2B}
+  \re@DeclareMathSymbol{\triangleleft}{\mathbin}{ntxletters}{"2F}
+  \re@DeclareMathSymbol{\triangleright}{\mathbin}{ntxletters}{"2E}
+  \re@DeclareMathSymbol{\partial}{\mathord}{ntxletters}{"40}
+  \re@DeclareMathSymbol{\flat}{\mathord}{ntxletters}{"5B}
+  \re@DeclareMathSymbol{\natural}{\mathord}{ntxletters}{"5C}
+  \re@DeclareMathSymbol{\star}{\mathbin}{ntxletters}{"3F}
+  \re@DeclareMathSymbol{\smile}{\mathrel}{ntxletters}{"5E}
+  \re@DeclareMathSymbol{\frown}{\mathrel}{ntxletters}{"5F}
+  \re@DeclareMathSymbol{\sharp}{\mathord}{ntxletters}{"5D}
+  \re@DeclareMathAccent{\vec}{\mathord}{ntxletters}{"7E}
+\makeatother
+\usepackage[scale=0.81]{sourcecodepro}
+
+\usepackage{appendix}
+\usepackage{etoolbox}
+\AtBeginEnvironment{subappendices}{%
+  \section*{Appendix}
+  \addcontentsline{toc}{section}{Appendix}
+  \counterwithin{figure}{section}
+  \counterwithin{table}{section}
+}
+
+% Put the hyperlinks on page numbers in ToC
+\hypersetup{linktocpage}
+% Include sectional numbers in the pdf bookmark panel
+\hypersetup{bookmarksnumbered}
+
+% Define colors
+\definecolor{MyLightGray}{gray}{0.9}
+\definecolor{MyDarkGray}{gray}{0.6}
+\newcommand\mycommfont[1]{\footnotesize\ttfamily\textcolor{MyDarkGray}{#1}}
+\SetCommentSty{mycommfont}
+
+% Define maths blocks
+\newtheorem{definition}{Definition}[section]
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{corollary}{Corollary}[theorem]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{remark}{Remark}
+
+% Set the bibliography style
+\bibliographystyle{alpha}
+
+% Add watermark on every page
+\usepackage{draftwatermark}
+\SetWatermarkText{%
+  {\fontfamily{cmr}\selectfont
+  draft:v0.1 Blondé University-of-Geneva May-2021%
+  }
+}
+\SetWatermarkColor[gray]{0.6}
+\SetWatermarkFontSize{0.8cm}
+\SetWatermarkAngle{90}
+\SetWatermarkHorCenter{1.3cm}
+
+% Specify title, author, and date
+% \title{\textbf{}}
+% \author{Lionel Blond\'e}
+% \date{}
+
+\begin{document}
+\frenchspacing
+
+\frontmatter
+\pagenumbering{gobble}
+% \maketitle
+\includepdf{00_frontmatter/00_cover/cover}
+\import{00_frontmatter/01_abstract/}{abstract}
+% \import{00_frontmatter/02_resume/}{resume}
+\clearpage
+\tableofcontents
+\pagenumbering{roman}
+
+\mainmatter
+\import{01_mainmatter/00_intro/}{intro}
+\import{01_mainmatter/01_chap1/}{chap1}
+\import{01_mainmatter/02_chap2/}{chap2}
+\import{01_mainmatter/03_chap3/}{chap3}
+\import{01_mainmatter/04_final/}{final}
+
+\backmatter
+{\footnotesize
+\bibliography{bibliography}
+}
+
+\end{document}

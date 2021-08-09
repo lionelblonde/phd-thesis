@@ -1,0 +1,132 @@
+%!TEX root = ../../main.tex
+
+% final
+
+\chapter[Final thoughts]{Final thoughts}
+\label{thesis:final}
+
+We have studied two ways of teaching an artificial agent to learn to interact with a world from
+which it does not get direct feedback on its evolving decision process.
+In imitation learning, the decision maker receives demonstrations from an expert, assumed to behave optimally;
+it can interact with its environment but does not receive the reward response upon execution.
+The decision-maker does not know how its own behavior would have been rated by the environment throughout the
+learning process, and assumes that the demonstrations it is provided with are what said environment would
+rate as optimal. We have treated this setting in \textsc{Chapters}~\ref{thesis:chap1} and \ref{thesis:chap2}.
+Similarly, when reinforcement learning is brought offline, the decision maker is never explicitly
+told how well it does at completing the interactive task because it is never allowed to interact with its
+environment in the first place.
+Instead of being rated directly about its own behavior, it is made aware of
+how another agent was rated by the environment when attempting to complete the same task.
+Note, in imitation learning, the demonstrations are not annotated with rewards like in offline RL,
+hence leaving the decision maker with the sole choice of having to interpret the demonstrations as optimal.
+In offline RL however, the provided traces of interactions from another agent are rated with rewards,
+and as such, the content of the the provided offline dataset need not be interpreted as optimal.
+In \textsc{Chapters}~\ref{thesis:chap3}, we have treated this setting and
+shown that seeing the datasets as optimal
+(despite being annotated with rewards that would enable a more agnostic approach with respect to the
+offline dataset's optimality) leads to poor performance compared to agnostic approaches
+when the dataset contains sub-optimal data.
+
+Learning an interactive strategy without direct feedback on the decisions made,
+a setting we identified as an instance of counterfactual learning,
+has proven challenging, and is by no means a solved problem.
+As soon as the decision maker has limited access to the environment (be it the lack of direct reward feedback
+upon interaction, or the inability to interact altogether)
+its ability to learn to complete an interactive task in the world is often significantly impaired.
+Leveraging datasets of logged interactions captured from another agent exposes the agents to
+hindering stability issues due to distributional mismatches occurring during the learning process.
+Still, considering the ubiquity and mass production of various types of sensors,
+aggregating data into feature-rich datasets of logged interactions is convenient and cheap.
+It is also far safer than the online (artificial counterpart of \textit{``in-person''}), interactive
+alternative: learning by acting in the real world.
+The exploration involved in reinforcement learning quickly makes the entire learning process hazardous
+both for the artificial decision maker (\textit{e.g.} autonomous vehicle, robot)
+and its environment (\textit{e.g.} pedestrians, healthcare patients).
+Looking for a digital surrogate to real-world interactions,
+the RL practitioner has naturally turned to training decision maker in simulation.
+Simulators offer valuable flexibility when it comes to exposing the agent to a wide and diverse
+array of situations that the agent would only rarely be faced by in the real world
+(\textit{e.g} unusual pavement coloration, signs being held by road workers in the occurrence of a road collision).
+
+High-fidelity, photo-realistic simulators that would best prepare the agent to face the real world,
+are nevertheless incredibly difficult and finicky to craft.
+Besides, they are usually used in tandem with augmented datasets of logged interactions from
+a multitude of agents.
+Challenges of such combination of simulation and (augmented) real-world data include:
+\emph{can the crafted simulator represent the data captured from the real world in simulation
+without mismatch?}
+\emph{How should the reward function underlying the observed behavior be designed
+to entice an agent learned in simulation to reproduce the same behavior?}
+\emph{How does one enable the artificial agent to deal with hazardous situations if
+everything that has ever being recorded corresponds to safe behaviors?}
+\emph{How should one bake in the multi-agent and social aspect of real-world interactions in simulation?}
+The social aspect of most real-world scenarios (in which RL seems to be the right paradigm to teach an AI)
+is particularly tedious to deal with considering how abstract concepts such as self-awareness enabling the agent
+to recognize its counterparts in the world can not be easily inferred from sensory recordings.
+By being able to identify an entity moving in its environment as another learning agent, like itself,
+the agent would be able to forecast what this external agent would to if it were to follow the main agent's
+decision process. By being able to forecast how such multi-agent environment might evolve
+in the next few seconds or minutes, the agent is likely to make better decisions overall.
+As such, designing social agents able to predict how other actors might act and react to
+any of the other actors' decisions is an important line of research to pursue,
+which can take advantage of the relational learning capabilities of recent attention-based research advances.
+Examples of such endeavors include
+\cite{Bradley_Knox2013-jg,Alahi2016-vi,Leibo2017-lg,Tai2017-wq,Vemula2017-zd,
+Li2018-wc,Gupta2018-cu,Kosaraju2019-ui,Zhou2020-hs,Ndousse2020-oz},
+where self-driving is focused most.
+
+We can expert high-fidelity simulators becomes better and better as times goes on,
+closing the gap between learning in simulation and real-world interaction.
+We can notably expect these to encode real-world physics with an increasing accuracy,
+to the point where the physics might even be baked into the decision maker itself.
+An example of the exploitation of such physics-originated properties is the explicit use
+of clothoids in \cite{Zeng2020-co}, the curves described by vehicles when turning the steering wheel at
+constant angular speed.
+These curves are instrumental in high-speed road design to join roads where the steering wheel is locked
+at a zero angle (the trajectory describes a straight line) and roads where the steering wheel is locked at a
+non-zero angle (the trajectory describes a circle).
+Clothoids are used because they translate to the most comfortable transition between these two
+locked steering wheel positions for the driver.
+They are also known as Euler spirals, or Cornu spirals is optics.
+
+As we close the gap between simulated and real-world reinforcement learning, it will prove increasingly valuable to
+adopt a multi-agent lens and provide the agent (or agents) with mechanisms
+that enable it (or them) to display social traits and manifest relational reasoning.
+Decentralized multi-agent RL, where every involved decision maker is independent,
+has the best horizontal scalability (compared to its centralized counterpart), but is also
+hindered by considerable extra challenge:
+from any of the independent agent's perspective, the environment (containing the other independent agents) is
+constantly changing.
+The non-stationarity of the respective environments every independent agent interacts with
+makes the task considerably more tedious to tackle empirically and violates the Markov property
+on which most convergence guarantees rely.
+It is common to base the agent's decisions on a history of states (or on a summary thereof) in such scenarios,
+to palliate the non-stationarity of the environment's dynamics from any agent's point of view.
+Sequential or memory-augmented models might provide the agent with the ability to infer the other agents' intents
+when the current state is not a sufficient statistic of the future.
+We can therefore expect progress in general sequential modeling to assist progress in
+these challenging multi-agent settings.
+As the simulated environments adopt structures that are increasingly more truthful in complexity
+to the real world, which is inherently non-stationarity,
+research progress on transferring models learned in simulation in the real world (\textit{``sim-to-real''}) will
+without a doubt play a significant role in closing the simulation-reality gap over time.
+
+Still, once we succeed in transferring agents trained in simulation into the real world,
+leveraging both captured data and high-fidelity simulators,
+the taught artificial agent must be adopted by the human user and be appealing to interact with.
+Humans effectively are agents in the multi-agent system, and as such,
+aspects from human-computer interfaces must be considered to integrate learned RL agent in
+the daily activities of the human end users.
+Imitation learning can play a significant role in making interactions with artificial agents
+more natural and human-like, as given an account of in
+\cite{Livingstone2006-ln,Tence2010-qt},
+tackling \emph{believability} in the context of AI in games.
+Both conversational and embodied agents can be made more believable, human-like,
+and therefore seemingly trustworthy by enabling the artificial decision maker to manifest
+interpersonal \emph{synchrony}
+(rhythmic coordination of actions, emotions, speech)
+with its human user,
+as synchrony plays an essential role in the way humans bond.
+
+
+

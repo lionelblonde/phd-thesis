@@ -1,0 +1,997 @@
+%!TEX root = ../../main.tex
+
+% body1
+
+\section*{Abstract}
+
+GAIL is a recent successful imitation learning architecture
+that exploits the adversarial training procedure introduced in GANs.
+Albeit successful at generating behaviours similar to those demonstrated
+to the agent, GAIL suffers from a high sample complexity in the number of
+interactions it has to carry out in the environment in order to achieve
+satisfactory performance.
+We dramatically shrink the amount of interactions with the
+environment necessary to learn well-behaved imitation policies,
+by up to several orders of magnitude.
+Our framework, operating in the model-free regime,
+exhibits a significant increase in sample-efficiency over previous methods
+by simultaneously
+\textit{a)} learning a self-tuned adversarially-trained surrogate reward and
+\textit{b)} leveraging an off-policy actor-critic architecture.
+We show that our approach is simple to implement
+and that the learned agents remain remarkably stable,
+as shown in our experiments that span a variety of continuous control tasks.
+Video visualisations available at:
+\url{https://youtu.be/-nCsqUJnRKU}.
+
+\section{Introduction}
+
+Reinforcement learning (RL) is a powerful and extensive framework enabling a
+learner to tackle complex continuous control tasks \cite{Sutton1998-ow}.
+Leveraging strong function approximators such as multi-layer neural networks,
+deep reinforcement learning alleviates the customary preliminary workload
+consisting in hand-crafting relevant features for the learning agent to work
+on.
+While being freed from this engineering burden opens up the framework to an
+even broader range of complex control and planning tasks, RL remains hindered
+by its reliance on reward design, referred to as
+\textit{reward shaping}.
+Albeit appealing in theory, shaping often requires an intimidating amount of
+engineering via trial and error to yield natural-looking behaviours and makes
+the system prone to premature convergence to local minima \cite{Ng1999-lv}.
+
+Imitation learning breaks free from the preliminary reward function
+hand-crafting step as it does not need access to a reinforcement signal.
+Instead, imitation learning learns to perform a task directly from expert
+demonstrations.
+The emerging policies mimic the behaviour displayed by the expert in those
+demonstrations.
+Learning from demonstrations (LfD) has enabled significant advances in robotics
+\cite{Billard2008-jb} and autonomous driving \cite{Pomerleau1989-nh,
+Pomerleau1990-lm}.
+Such models were fit from the expert demonstrations alone in a supervised
+fashion, without gathering new data in simulation.
+Albeit efficient when data is abundant, they tend to be frail as the agent
+strays from the expert trajectories.
+The ensuing compounding of errors causes a covariate shift \cite{Ross2010-eb,
+Ross2011-dn}.
+This approach, referred to as \textit{behavioral cloning}, is therefore poorly
+adapted
+for imitation.
+Those limitations stem from the sequential nature of the problem.
+
+The caveats of behavioral cloning have recently been successfully addressed by
+Ho and Ermon \cite{Ho2016-bv} who introduced a model-free imitation learning
+method called \textit{Generative Adversarial Imitation Learning} (GAIL).
+Leveraging Generative Adversarial Networks (GAN) \cite{Goodfellow2014-yk},
+GAIL alleviates the limitations of the supervised approach by
+\textit{a)} learning a reward surrogate that explains the behaviour shown in the
+demonstrations and
+\textit{b)} following an RL procedure in an inner loop, consisting in performing
+rollouts in a simulated environment with the learned surrogate as
+reinforcement signal.
+Several works have built on GAIL to overcome the weaknesses it inherits from
+GANs, with a particular emphasis on avoiding mode collapse
+\cite{Li2017-sb, Hausman2017-hb, Kuefler2017-zu},
+causing policies to fail at displaying the diversity of demonstrated
+behaviours or skills \cite{Goodfellow2017-pv}.
+However, as the authors point out
+in the original paper (\cite{Ho2016-bv}, \textsc{Section} 7),
+GAIL suffers from severe sample inefficiency.
+It is this limitation of GAIL that we address in this paper.
+``Sample-efficient'' here means that we focus on limiting the number of
+agent-environment interactions, in contrast with reducing the number of
+demonstrations needed by the agent.
+Although learning from fewer demonstrations is not the primary focus of this work,
+our experiments span a spectrum of demonstration dataset sizes.
+
+Failures of previous works to address the exceeding sample complexity stems
+from the on-policy nature of the RL procedure they employ.
+In such methods, every interaction in a given rollout typically
+is used to compute the Monte Carlo estimate of the state value
+by summing the rewards accumulated during the current trajectory.
+The experienced transitions are then discarded.
+Holding on to past trajectories to carry out more than a single optimization
+step might appear viable but often results
+in destructively large policy updates \cite{Schulman2017-ou}.
+Gradients based on those estimates therefore suffer from high variance, which
+can be reduced by sampling more intensively, hence the deterring sample
+complexity.
+
+In this work, we introduce a novel method that successfully addresses the
+impeding sample inefficiency in the number of simulator queries
+suffered by previous methods.
+By designing an off-policy learning procedure relying on the use of
+retained past experiences, we considerably shrink the amount of
+interactions necessary to learn good imitation policies.
+Despite involving an adversarial training procedure and an actor-critic method,
+both notorious
+for being prone to instabilities and prohibitively difficult to train,
+our technique demonstrates consistent stability,
+as shown in the experimental section.
+Additionally, our reliance on the deterministic policy gradients
+allows us to exploit further information about the learned reward
+function, such as its gradient.
+Previous methods either ignore it by treating the reward signal as a scalar in
+a model-free fashion or train a forward model to exploit it.
+Our method achieves the best of both worlds as it can perform a backward pass
+from the discriminator to the generator (policy) while remaining model-free.
+
+\section{Related work}
+
+Imitation learning aims to learn how to perform tasks solely from expert
+demonstrations.
+Two approaches are typically adopted to tackle imitation learning problems:
+\textit{a)} \textit{behavioral cloning} (BC),
+originated in \cite{Pomerleau1989-nh, Pomerleau1990-lm}, which
+learns a policy via regression on the state-action pairs from the expert
+trajectories, and
+\textit{b)} \textit{apprenticeship learning} (AL)
+\cite{Abbeel2004-rb}, which posits the existence of some unknown reward
+function under which the expert policy is optimal and learns a policy by
+\textit{i)} recovering the reward that the expert is assumed to maximise
+(an approach called \textit{inverse reinforcement learning} (IRL)) and
+\textit{ii)} running an RL procedure with this recovered signal.
+As a supervised approach, BC is limited to the available demonstrations to
+learn a regression model, whose predictions worsen dramatically as the agent
+strays from the demonstrated trajectories.
+It then becomes increasingly difficult for the model to recover as the errors
+compound \cite{Ross2010-eb, Ross2011-dn, Bagnell2015-ni}.
+Only the presence of correcting behaviour in the demonstration dataset can
+allow BC to produce robust policies.
+AL alleviates this weakness by entangling learning the reward function and
+learning the mimicking policy, leveraging the return of the latter to adjust
+the parameters of the former. Models are trained on traces of interaction with
+the environment rather than on a fixed state pool, leading to greater
+generalization to states absent from the demonstrations.
+Albeit preventing errors from compounding, IRL comes with a high computational
+cost, as both modelling the reward function and solving the ensuing RL problem
+(per learning iteration) can be resource intensive
+\cite{Syed2008-zo, Syed2008-su, Ho2016-xn, Levine2011-hi}.
+
+In an attempt to overcome the shortcomings of IRL, Ho and Ermon
+\cite{Ho2016-bv} managed to bypass the need for learning the reward function
+assumed to have been optimised by the expert when collecting the
+demonstrations.
+The proposed approach to AL,
+\textit{Generative Adversarial Imitation Learning} (GAIL),
+relies on an essential step consisting in learning
+a surrogate function measuring the similarity between the learned policy and
+the expert policy, using Generative Adversarial Networks (GAN)
+\cite{Goodfellow2014-yk}.
+The learned similarity metric is then employed as a reward proxy to carry out
+the RL step, inherent to the AL scheme.
+Recently, connections have been drawn between GANs, RL \cite{Pfau2016-ft} and
+IRL \cite{Finn2016-uj}.
+In this work, we extend GAIL to further exploit the connections between those
+frameworks and overcome a limitation that was left unaddressed: the
+burdensome sample inefficiency of the method.
+
+GANs
+involve a generator and a discriminator, each represented by a neural network,
+making the associated computational graph fully differentiable.
+The gradient of the discriminator with respect to the output of
+the generator is of primary importance as it indicates how the
+generator should change its output to have better chances at fooling the
+discriminator at the next iteration.
+In GAIL, the generator's role is carried out by a stochastic policy, causing
+the computational graph to no longer be differentiable end-to-end.
+Following a model-based approach, \cite{Baram2017-es} recovers the
+gradient of the discriminator with respect to actions
+(via reparametrization tricks)
+and with respect to states (via a forward model),
+making the computational graph fully differentiable.
+In contrast, the method introduced in this work can,
+by operating over deterministic policies and leveraging
+the deterministic policy gradient theorem \cite{Silver2014-dk},
+directly wield the gradient of the discriminator
+with respect to the actions,
+without requiring gradient estimation techniques
+(\textit{e.g.}~reparametrization trick \cite{Kingma2014-hf},
+Gumbel-Softmax trick \cite{Jang2017-tu, Maddison2017-gk}).
+Since we stick to the model-free setting,
+states remain stochastic nodes and therefore block (backward) gradient flows.
+
+An independent endeavour to overcome the data inefficiency of GAIL has
+very recently
+been reported in \cite{Kostrikov2019-jo},
+in which the authors leverage a similar architecture,
+yet rely on an arguably ad-hoc preliminary preprocessing technique on
+the demonstrations before the imitation begins.
+In contrast, our method does not rely on any preprocessing to
+yield gains in sample efficiency by orders of magnitude.
+
+\section{Background}
+
+\subsection*{Setting}
+
+We address the problem of an agent learning to act in an environment in order
+to \emph{reproduce} the behaviour of an expert demonstrator.
+No direct supervision is provided to the agent --- she is never directly told
+what the optimal action is --- nor does she receives a reinforcement signal
+from the environment upon interaction.
+Instead, the agent is provided with a pool of trajectories and must use them to
+guide its learning process.
+
+\subsection*{World and agent}
+
+We model this sequential interactive problem over discrete timesteps as a
+\textit{Markov decision process} (MDP) $\mathbb{M}$ \cite{Puterman1994-pf},
+formalised as a tuple
+$(\mathcal{S}, \mathcal{A}, \rho_0, p, r, \gamma)$.
+$\mathcal{S}$ and $\mathcal{A}$ respectively denote the state and action
+spaces.
+The dynamics are defined by a transition distribution with conditional
+density $p(s_{t+1} | s_t, a_t)$, along with $\rho_0$, the density
+of the distribution from which the initial state is sampled.
+Finally, $\gamma \in (0, 1]$ denotes the discount factor and
+$r: \mathcal{S} \times \mathcal{A} \rightarrow \mathbb{R}$ the reward function.
+We consider only the fully-observable case, in which the current state can be
+described with the current observation $o_t = s_t$, alleviating the need to
+involve the entire history of observations.
+Although our results are presented following the previous infinite-horizon MDP,
+the MDPs involved in our experiments are \textit{episodic},
+with $\gamma = 0$ at episode termination.
+In the theory, whenever we omit the discount factor, we implicitly assume the
+existence of an absorbing state along any agent-generated trajectory.
+We formalise the sequential decision making process of the agent by defining a
+parameterised policy $\pi_\theta$, modelled via a neural network with parameter
+$\theta$.
+$\pi_\theta(a_t|s_t)$ designates the conditional probability density
+concentrated at action $a_t$ when the agent is in state $s_t$.
+In line with our setting, the agent interacts with $\mathbb{M}^-$,
+an MDP comprising every element of $\mathbb{M}$ except its reward function $r$.
+Since our approach involves learning a surrogate reward function, we use
+$\mathbb{M}^+$ to denote the MDP resulting from the augmentation of
+$\mathbb{M}^-$ with the learned reward.
+We can therefore equivalently assume that the agent interacts with
+$\mathbb{M}^+$.
+\textit{Trajectories} are traces of interaction between an agent and an MDP.
+Specifically, we model trajectories as sequences of \textit{transitions}
+$(s_t, a_t, r_t, s_{t+1})$, atomic units of interaction.
+\textit{Demonstrations} are provided to the agent through a set of expert
+trajectories $\tau_e$, generated by an expert policy $\pi_e$ in $\mathbb{M}$.
+
+\subsection*{Objective}
+
+We now introduce
+additional concepts and notations that will be used in the
+remainder of this work.
+The \textit{return} is the total discounted reward from timestep $t$ onwards:
+$R_t^\gamma \coloneqq \sum_{k=t}^{+\infty} \gamma^{k-t} r(s_k, a_k)$.
+The state-action value, or Q-value, is the expected return after
+picking action $a_t$ in state $s_t$, and thereafter following policy
+$\pi_\theta$:
+$Q^{\pi_\theta}(s_t, a_t) \coloneqq
+\mathbb{E}_{\pi_\theta}^{>t}[R_t^\gamma]$,
+where $\mathbb{E}_{\pi_\theta}^{>t}[\cdot]$ denotes the expectation taken along
+trajectories generated by $\pi_\theta$ in $\mathbb{M}^+$ (respectively
+$\mathbb{E}_{\pi_e}^{>t}[\cdot]$ for $\pi_e$ in $\mathbb{M}$) and looking
+onwards from state $s_t$ and action $a_t$.
+We want our agent to find a policy $\pi_\theta$ that maximises the expected
+return from the start state, which constitutes our performance objective,
+$J(\pi) \coloneqq \mathbb{E}_\pi[R_0^\gamma]$,
+i.e.~$\pi_\theta = \argmax_\pi \, J(\pi)$,
+for any given start state $s_0 \sim \rho_0$.
+To ease further notations, we finally introduce the
+\textit{discounted state visitation distribution}
+of a policy $\pi$, denoted by $\rho^\pi: \mathcal{S} \to [0,1]$, and defined by
+$\rho^\pi(s) \coloneqq
+\sum_{t=0}^{+\infty} \gamma^t \mathbb{P}_{\rho_0, \pi}[s_t = s]$,
+where $\mathbb{P}_{\rho_0, \pi}[s_t = s]$
+is the probability of arriving at state $s$ at time step $t$ when
+sampling the initial state from $\rho_0$ and thereafter following policy $\pi$.
+In our experiments, we omit the discount factor  for state visitation, in line
+with common practices.
+
+\subsection*{Generative Adversarial Imitation Learning}
+
+Leveraging \textit{Generative Adversarial Networks} \cite{Goodfellow2014-yk},
+\textit{Generative Adversarial Imitation Learning} \cite{Ho2016-bv}
+introduces an extra neural network $D_\varphi$
+to play the role of \textit{discriminator}, while the role of
+\textit{generator} is carried out by the agent's policy $\pi_\theta$.
+$D_\varphi$ tries to assert whether a given state-action pair
+originates from trajectories of $\pi_\theta$ or $\pi_e$, while $\pi_\theta$
+attempts to fool $D_\varphi$ into believing her state-action pairs come from
+$\pi_e$.
+The situation can be described as a minimax problem
+$\min_\theta \max_\varphi \, V(\theta, \varphi)$, where
+the \textit{value} of the two-player game is
+$V(\theta, \varphi) \coloneqq
+\mathbb{E}_{\pi_\theta}[\log (1 - D_\varphi(s, a))]
++ \mathbb{E}_{\pi_e}[\log D_\varphi(s, a)]$.
+We omit the causal entropy term for brevity.
+The optimization is however hindered by the stochasticity
+of $\pi_\theta$,
+causing $V(\theta, \varphi)$ to be non-differentiable with respect to $\theta$.
+The solution proposed in \cite{Ho2016-bv} consists in alternating between a
+gradient step (\textsc{Adam}, \cite{Kingma2014-op}) on $\varphi$ to increase
+$V(\theta, \varphi)$ with respect to $D_\varphi$, and a policy optimization step
+(TRPO, \cite{Schulman2015-jt}) on $\theta$ to decrease $V(\theta, \varphi)$ with
+respect to $\pi_\theta$.
+In other words, while $D_\varphi$ is trained as a binary classifier to predict if
+a given state-action pair is real (from $\pi_e$) or generated (from
+$\pi_\theta$), the policy $\pi_\theta$ is trained by being rewarded for
+successfully confusing $D_\varphi$ into believing that generated samples are coming
+from $\pi_e$, and treating this reward as if it were an external
+analytically-unknown reward from the environment.
+
+\begin{figure}[h!]
+\center
+\scalebox{0.30}[0.30]{\includegraphics{Diags/gail_big}}
+\caption{Inter-module relationships in
+Generative Adversarial Imitation Learning \cite{Ho2016-bv}.}
+\label{fig:gail_big}
+\end{figure}
+
+\subsection*{Actor-critic}
+
+Policy gradient methods with function approximation \cite{Sutton1999-ii},
+referred to as \textit{actor-critic} (AC) methods,
+interleave \textit{policy evaluation} with \textit{policy iteration}.
+Policy evaluation estimates the state-action value function with a function
+approximator called \textit{critic}
+$Q_\omega \approx Q^{\pi_\theta}$, usually via either
+Monte-Carlo (MC) estimation or Temporal Difference (TD) learning.
+Policy iteration updates the policy $\pi_\theta$ by greedily optimising it
+against the estimated critic $Q_\omega$.
+
+\begin{figure}[h!]
+\center
+\scalebox{0.20}[0.20]{\includegraphics{Diags/ac_big}}
+\caption{Inter-module relationships in an
+Actor-Critic architecture \cite{Sutton1999-ii}.}
+\label{fig:ac_big}
+\end{figure}
+
+\section{Algorithm}
+
+The approach in this paper,
+named \emph{Sample-efficient Adversarial Mimic} (SAM),
+adopts an off-policy TD learning paradigm.
+By storing past experiences and replaying them in an uncorrelated fashion,
+SAM displays significant gains in sample-efficiency,
+in line with \cite{Wang2016-mp, Gu2016-uc}.
+To solve the differentiability bottleneck of \cite{Ho2016-bv}
+caused by the stochasticity of its generator,
+we operate over deterministic policies.
+At a given state $s_t$, following its deterministic policy $\mu_\theta$,
+an agent selects the action $a_t = \mu_\theta(s_t)$.
+Alternatively, we can obtain a deterministic policy from any stochastic policy
+$\pi_\theta$
+by systematically picking the average action for a given state:
+$\mu_\theta(s_t) = \mathbb{E}_a[\pi_\theta(a | s_t)]$.
+By relying on an off-policy actor-critic architecture and
+wielding deterministic policies,
+SAM builds on
+the \textit{Deep Deterministic Policy Gradients} (DDPG) algorithm
+\cite{Lillicrap2016-xa},
+in the context of Imitation Learning.
+
+SAM is composed of three interconnected learning modules:
+a \emph{reward} module (parameter $\varphi$),
+a \emph{policy} module (parameter $\theta$), and
+a \emph{critic} module (parameter $\omega$)
+(\textit{cf.}~\textsc{Figure}~\ref{fig:diags} and \ref{fig:sam_big}).
+The reward and policy modules are both involved in a GAN's adversarial
+training procedure,
+while the policy and critic modules are trained as an
+actor-critic architecture.
+As reminded recently in \cite{Pfau2016-ft}, GANs and actor-critic
+architectures can be both framed as bilevel optimization problems, each
+involving two competing components, which we just listed out for both
+architectures.
+Interestingly, the policy module plays a role in both problems,
+tying the two bilevel optimization problems together.
+In one problem, the policy module is trained against the reward module,
+while in the other,
+the policy module is trained against the critic module.
+The reward and critic modules can therefore be seen as serving analogous roles
+in their respective bilevel optimization problems:
+forging and maintaining a signal which enables the reward-seeking policy to
+adopt the desired behaviour.
+How each of these component is optimised is described in the
+subsequent dedicated sections.
+
+\begin{figure}[!h]
+\centering
+\begin{subfigure}[t]{0.27\textwidth}
+\centering
+\includegraphics[width=\linewidth]{%
+Diags/ac}
+\caption{Actor-Critic \cite{Sutton1999-ii}}
+\end{subfigure}
+\begin{subfigure}[t]{0.27\textwidth}
+\centering
+\includegraphics[width=\linewidth]{%
+Diags/gail}
+\caption{GAIL \cite{Ho2016-bv}}
+\end{subfigure}
+\begin{subfigure}[t]{0.37\textwidth}
+\centering
+\includegraphics[width=\linewidth]{%
+Diags/sam}
+\caption{SAM \cite{Blonde2019-vc}}
+\end{subfigure}
+\caption{Inter-module relationships in different neural architectures
+(the scope of this figure was inspired from \cite{Pfau2016-ft}).
+Modules with distinct loss functions are depicted with empty circles, while
+filled circles designate environmental entities.
+Solid and dotted arrows respectively represent
+(forward) flow of information
+and
+(backward) flow of gradient.
+\textit{a)}
+Generative Adversarial Imitation Learning \cite{Ho2016-bv}
+\textit{b)}
+Actor-Critic architecture \cite{Sutton1999-ii}
+\textit{c)}
+SAM (this work).
+Note, in SAM, the critic takes in information from the reward
+module, while in the vanilla AC architecture, the critic receives the
+reward from the environment.
+The gradient flow from the critic to the reward module must however
+be sealed.
+Indeed, such
+a gradient flow would allow the policy to adjust its parameters to induce
+values of the reward which yield low TD residuals, hence preventing both
+critic and reward modules to be learned as intended.}
+\label{fig:diags}
+\end{figure}
+
+As an off-policy method, SAM cycles through the following steps:
+\textit{i)} the agent uses $\pi_\theta$ to interact with $\mathbb{M}^+$,
+\textit{ii)} stores the experienced transitions $\mathcal{C}$ in a replay buffer $\mathcal{R}$,
+\textit{iii)} updates the reward module $\varphi$ with an equal mixture of uniformly sampled
+state-action pairs
+from $\mathcal{C}$ and $\tau_e$,
+\textit{iv)} updates the reward module $\varphi$ with an equal mixture of uniformly sampled
+state-action pairs
+from $\mathcal{R}$ and $\tau_e$, and
+\textit{v)} updates the policy module $\theta$ and critic module $\omega$
+with transitions sampled from $\mathcal{R}$.
+Note that while sampling uniformly from $\mathcal{C}$ (iii) gives
+states and actions distributed as $\rho^{\pi_\theta}$ and $\pi_\theta$ respectively
+(on-policy),
+sampling uniformly from $\mathcal{R}$ (iv) gives
+states and actions distributed as $\rho^\beta$ and $\beta$ respectively,
+where $\beta$ denotes the off-policy sampling mixture distribution
+corresponding to sampling transitions uniformly from the replay buffer.
+A more detailed description of the training procedure is laid out in the
+algorithm pseudo-code (\textit{cf.}~\textsc{Algorithm}~\ref{fig:algo}).
+
+\begin{figure}[h!]
+\center
+\scalebox{0.20}[0.20]{\includegraphics{Diags/sam_big}}
+\caption{Inter-module relationships in SAM (this work).}
+\label{fig:sam_big}
+\end{figure}
+
+\subsection{Reward}
+We introduce a reward network with parameter vector $\varphi$,
+operating as the discriminator.
+The cross-entropy loss used to train the reward network is:
+\begin{align}
+  \mathbb{E}_{\pi_\theta}[- \log (1 - D_\varphi(s, a))]
+  + \mathbb{E}_{\pi_e}[- \log D_\varphi(s, a)]
+  + \lambda \, \mathfrak{R}_{\text{GP}}(\varphi)
+  \label{eq:varphiloss}
+\end{align}
+where $\mathfrak{R}_{\text{GP}}(\varphi)$ is a
+penalty on the discriminator gradient,
+as introduced in \cite{Gulrajani2017-mr}, \textsc{Section} 4.
+\cite{Lucic2017-nz} reports benefits from applying such regulariser to
+the non-saturated variant of the discriminator loss, although it
+was initially introduced for Wasserstein GANs \cite{Arjovsky2017-la} in
+\cite{Gulrajani2017-mr}.
+This penalty favours our method by further improving its stability.
+
+The reward is defined as the negative of the generator loss.
+The later has been declined in many variants, which are
+thoroughly compared in \cite{Lucic2017-nz}.
+We can therefore analogously define a synthetic reward for each of these
+forms. We go over and discuss major ones in supplementary material.
+Additionally, \cite{Fu2018-zu} proposes an extra variant
+in the context of IRL.
+In the remainder, we use
+$r_\varphi(s_t, a_t) = - \log (1 - D_\varphi(s_t, a_t))$
+as synthetic reward.
+The reward network is trained, each iteration,
+first on the mini-batch most recently collected by $\pi_\theta$,
+then on mini-batches sampled from the replay buffer.
+Although \cite{Pfau2016-ft} reports that using a replay buffer in GANs
+causes the generation to be poor,
+we do not seem to suffer the same detrimental effect in
+the continuous control tasks we tackle.
+
+\subsection{Critic}
+The loss optimised by the critic, noted $\ell(\omega)$, involves three
+components:
+\textit{i)} a $1$-step Bellman residual $\ell_1(\omega)$,
+\textit{ii)} a $n$-step Bellman residual $\ell_n(\omega)$, and
+\textit{iii)} a weight decay regulariser $\mathfrak{R}_{\text{WD}}(\omega)$.
+A similar loss is employed in \cite{Vecerik2017-ue} in the context of
+Reinforcement Learning from Demonstrations.
+While the authors use weight decay regularisers for both the policy and
+the critic, we restrain from decaying the policy's weights since,
+in our setting, the policy plays a role in two distinct optimization problems.
+We do not apply a weight decay regulariser for the discriminator either,
+as it was proven to cause the Wasserstein GAN
+\textit{critic}
+(name given to the discriminator in Wasserstein GANs) to diverge
+\cite{Gulrajani2017-mr}.
+
+We define the critic loss as follows:
+\begin{align}
+  \ell(\omega) =
+  \ell_1(\omega) + \ell_n(\omega) + \nu \, \mathfrak{R}_{\text{WD}}(\omega)
+  \label{eq:omegaloss}
+\end{align}
+where $\nu$ is a hyperparameter that determines how much decay is used.
+The losses i) and ii) are defined respectively based on the $1$-step and
+$n$-step lookahead versions of the Bellman equation,
+\begin{align}
+  \tilde{Q}_\omega^1(s_t, a_t) & \coloneqq
+  r_\varphi(s_t, a_t)
+  % \\
+  % &
+  + \gamma Q_\omega(s_{t+1}, \mu_\theta(s_{t+1}))
+  \label{eq:qtilde1}
+  \\
+  \tilde{Q}_\omega^n(s_t, a_t) & \coloneqq
+  \sum_{k=0}^{n-1} \gamma^k r_\varphi(s_{t+k}, a_{t+k})
+  % \\
+  % &
+  + \gamma^n Q_\omega(s_{t+n}, \mu_\theta(s_{t+n}))
+  \label{eq:qtilden}
+\end{align}
+yielding the critic losses:
+\begin{align}
+  \ell_1(\omega) \coloneqq
+  \mathbb{E}_{s_t \sim \rho^\beta, a_t \sim \beta}
+  [
+  (\tilde{Q}_\omega^1 - Q_\omega)^2(s_t, a_t)
+  ]
+  \\
+  \ell_n(\omega) \coloneqq
+  \mathbb{E}_{s_t \sim \rho^\beta, a_t \sim \beta}
+  [
+  (\tilde{Q}_\omega^n - Q_\omega)^2(s_t, a_t)
+  ]
+  \label{eq:varphilosses}
+\end{align}
+where $\mathbb{E}_{s_t \sim \rho^\beta, , a_t \sim \beta}[\cdot]$
+signifies that
+transitions are sampled from the replay buffer $\mathcal{R}$,
+using in effect the off-policy distribution $\beta$.
+Both $Q_\omega$ and $\tilde{Q}_\omega^\cdot$
+(\eqref{eq:qtilde1}, \eqref{eq:qtilden})
+depend on $\omega$,
+which might cause severe instability.
+In order to prevent the critic from diverging, we use separate \textit{target}
+networks for both policy and critic ($\smash{\theta'}$, $\smash{\omega'}$)
+to calculate
+$\smash{\tilde{Q}_\omega^\cdot}$,
+which slowly track the learned parameters ($\theta$, $\omega$).
+In line with results exhibited in the recent ablation study
+(\textsc{Rainbow} \cite{Hessel2017-ns})
+assessing the influence of the various add-ons of DQN \cite{Mnih2013-rb, Mnih2015-iy}
+on its performance,
+we studied the influence of two add-ons that were transposable to SAM:
+longer TD backups and replay prioritisation.
+$n$-step returns
+not only played a significant role in improving the sample complexity,
+but also had a positive influence on stability in the training regime.
+Prioritized Experience Replay \cite{Schaul2016-oj}
+however prevented SAM from consistently learning well-behaved policies.
+Being already prone to overfitting in its original setting
+\cite{Schaul2016-oj},
+we conjecture this phenomenon is amplified in our setting since the TD-errors,
+instrumental in the priority assignments,
+depend on rewards that are themselves learned.
+Uniform experience replay
+offers greater resilience against oversampling
+transitions that have wrongfully been assigned high synthetic rewards by the
+adversarially-trained reward module.
+
+\subsection{Policy}
+We update the policy $\mu_\theta$ so as to maximise the
+\textit{performance objective},
+defined as the expected return from the start state.
+To that end, the policy is updated by taking a gradient ascent step along:
+\begin{align}
+  \nabla_\theta^{(1)} J(\mu_\theta)
+  & \approx \mathbb{E}_{s_t \sim \rho^\beta}
+  \left[
+  \nabla_\theta
+  Q_\omega(s_t, \mu_\theta(s_t))
+  \right]
+  \\
+  & = \mathbb{E}_{s_t \sim \rho^\beta}
+  \left[
+  \nabla_\theta
+  \mu_\theta(s_t) \nabla_a Q_\omega(s_t, a)
+  |_{a = \mu_\theta(s_t)}
+  \right]
+  \label{eq:thetagrad2}
+\end{align}
+where the partial derivative with respect to the state is
+ignored since we consider the model-free setting.
+This gradient estimation stems from the policy gradient theorem proved by
+\cite{Silver2014-dk},
+and points towards regions of the parameter space in which the policy
+displays high similarity with the demonstrator.
+We model the synthetic reward as a parametrised function
+that takes a state and an action as inputs.
+As such, we can take the derivative of the reward with respect to $\theta$.
+By applying the chain rule, we obtain:
+\begin{align}
+  \nabla_\theta^{(2)} J(\mu_\theta)
+  & \approx \mathbb{E}_{s_t \sim \rho^\beta}
+  \left[
+  \nabla_\theta
+  r_\varphi(s_t, \mu_\theta(s_t))
+  \right]
+  \\
+  & = \mathbb{E}_{s_t \sim \rho^\beta}
+  \left[
+  \nabla_\theta
+  \mu_\theta(s_t) \nabla_a r_\varphi(s_t, a)
+  |_{a = \mu_\theta(s_t)}
+  \right]
+  \label{eq:thetagrad1}
+\end{align}
+which constitutes another estimate of how to update
+the policy parameters $\theta$ to increase the similarity between the
+policy and the expert (\cite{Sasaki2019-uq} employs a similar estimate).
+
+Each estimate of how well the agent is behaving,
+$r_\varphi$ and $Q_\omega$, is trained via a
+different policy evaluation method, each presenting its own advantages.
+The first is updated by adversarial training, providing an accurate estimate of
+the immediate similarity with expert trajectories.
+The second is trained via TD learning, enabling longer propagation of
+rewards along trajectories and effectively tackling the credit assignment
+problem.
+While our formulation enables us to use either of these gradient estimates,
+$\nabla_\theta^{(1)} J(\mu_\theta)$ is more suited to learn control policies in
+environments inducing delayed rewards.
+As the continuous control tasks we consider in this paper belong to this
+category, we use $\nabla_\theta^{(1)} J(\mu_\theta)$ to update the policy module.
+While we could use a mixture of $\nabla_\theta^{(1)} J(\mu_\theta)$ and
+$\nabla_\theta^{(2)} J(\mu_\theta)$, we found that the latter had a
+detrimental effect on the former, as it prevented the policy to reason
+across timesteps, resulting in poor reward propagation.
+
+\subsection{Exploration}
+Deterministic policies have zero variance in their
+predictions for a given
+state, translating to no exploratory behaviour.
+The exploration problem is therefore treated independently from how the policy
+is modelled, by defining a stochastic policy $\pi_\theta$
+from the learned deterministic policy $\mu_\theta$.
+In this work, we construct $\pi_\theta$ via the combination of
+two fundamentally different techniques:
+\textit{a)} by applying an adaptive perturbation to the learned weights $\theta$
+(exploration by noise-injection in parameter space
+\cite{Plappert2018-rl, Fortunato2017-af}) and
+\textit{b)} by adding temporally-correlated noise sampled from a Ornstein-Uhlenbeck
+process $\mathfrak{N}_{OU}$
+\cite{Lillicrap2016-xa}, well-suited for control tasks involving
+inertia (\textit{e.g.} locomotion tasks, and simulated robotics in general).
+We denote the obtained policy by
+$\pi_\theta \coloneqq \mu_{\tilde{\theta}} + \mathfrak{N}_{OU}$,
+where $\tilde{\theta}$ results from applying a) to $\theta$.
+When interacting with the environment, SAM
+samples from the conditional distribution $\pi_\theta$,
+and stores the collected transitions in the replay buffer $\mathcal{R}$.
+An interesting result is that the reward is adversarially trained
+on samples coming from the parameter-perturbed policy.
+Rather than causing severe divergence, it seems that it positively impacts the
+adversarial training procedure.
+This observation directly echoes noise-injection techniques from the GAN
+literature.
+The additive noise applied to the output of our policy (which plays the role
+of generator in our architecture)
+aligns with
+\cite{Arjovsky2017-ne}
+who add artificial noise to the inputs of the discriminator (although we
+do not perturb expert trajectories).
+Furthermore, perturbing $\mu_\theta$ in parameter space
+draws strong similarities with \cite{Zhao2017-bs}, in which the authors
+add Gaussian noise to the layers of the generator.
+
+
+\begin{algorithm}
+  \SetKwComment{Comment}{}{}
+  Initialise replay buffer $\mathcal{R}$ \\
+  Initialise network parameters ($\varphi$, $\theta$, $\omega$) \\
+  Initialise target network parameters ($\theta'$, $\omega'$) as respective
+  copies of ($\theta$, $\omega$) \\
+  \For{$\text{i} \in 1, \ldots, \text{i}_\text{max}$}{
+    \Comment{\textcolor{gray}{\# Interact with environment}}
+    \Comment{\textcolor{gray}{\# and store collected transitions}}
+    \For{$\text{c} \in 1, \ldots, \text{c}_\text{max}$}{
+      Interact with environment following $\pi_\theta$
+      and
+      collect the experienced transitions in $\mathcal{C}$
+      augmented with synthetic rewards
+      \\
+      Store $\mathcal{C}$ in the replay buffer $\mathcal{R}$
+    }
+    \For{$\text{t} \in 1, \ldots, \text{t}_\text{max}$}{
+      \Comment{\textcolor{gray}{\# Update reward module}}
+      \For{$\text{d} \in 1, \ldots, \text{d}_\text{max}$}{
+        Sample uniformly a minibatch $\mathcal{B}^c$ of
+        state-action pairs pairs
+        from $\mathcal{C}$ \\
+        Sample uniformly a minibatch $\mathcal{B}_e^c$ of
+        state-action pairs
+        from the
+        expert dataset $\tau_e$,
+        with $|\mathcal{B}^c| = |\mathcal{B}_e^c|$ \\
+        Update synthetic reward parameter $\varphi$ with the equal mixture
+        $\mathcal{B}^c \cup \mathcal{B}_e^c$ by following the gradient:
+        %
+        $
+        \hat{\mathbb{E}}_{\mathcal{B}^c}
+        [\nabla_\varphi \log(1 - D_\varphi(s, a))]
+        +
+        \hat{\mathbb{E}}_{\mathcal{B}_e^c}
+        [\nabla_\varphi \log D_\varphi(s, a)]
+        +
+        \lambda \nabla_\varphi \mathfrak{R}_{\text{GP}}(\varphi)
+        $
+        \\
+        \vspace{0.2cm}
+        Sample uniformly a minibatch $\mathcal{B}^d$ of
+        state-action pairs
+        from $\mathcal{R}$ \\
+        Sample uniformly a minibatch $\mathcal{B}_e^d$ of
+        state-action pairs
+        from the
+        expert dataset $\tau_e$,
+        with $|\mathcal{B}^d| = |\mathcal{B}_e^d|$ \\
+        Update synthetic reward parameter $\varphi$ with the equal mixture
+        $\mathcal{B}^d \cup \mathcal{B}_e^d$ by following the gradient:
+        %
+        $
+        \hat{\mathbb{E}}_{\mathcal{B}^d}
+        [\nabla_\varphi \log(1 - D_\varphi(s, a))]
+        +
+        \hat{\mathbb{E}}_{\mathcal{B}_e^d}
+        [\nabla_\varphi \log D_\varphi(s, a)]
+        +
+        \lambda \nabla_\varphi \mathfrak{R}_{\text{GP}}(\varphi)
+        $
+      }
+      \Comment{\textcolor{gray}{\# Update policy and critic modules}}
+      \For{$\text{g} \in 1, \ldots, \text{g}_\text{max}$}{
+        Sample uniformly a minibatch $\mathcal{B}^g$ of
+        transitions
+        from $\mathcal{R}$ \\
+        Update policy parameter $\theta$
+        by following the gradient:
+        %
+        $
+        \hat{\mathbb{E}}_{\mathcal{B}^g}
+        [\nabla_\theta J(\mu_\theta)]
+        $
+        \\
+        Update critic parameters $\omega$ by minimizing critic loss:
+        %
+        $
+        \hat{\mathbb{E}}_{\mathcal{B}^g}
+        [\ell(\omega)]
+        $
+        \\
+        Update target network parameters ($\theta'$, $\omega'$)
+        to slowly track ($\theta$, $\omega$), respectively
+      }
+    }
+  }
+  \caption{Sample-efficient Adversarial Mimic}
+  \label{fig:algo}
+\end{algorithm}
+
+\section{Results}
+
+\begin{figure}
+  \center
+  \begin{subfigure}[t]{0.49\textwidth}
+    \center\scalebox{0.30}[0.30]{\includegraphics{Plots/sam_gail_InvertedPendulum_s0-1-2-3_d4_results_log}}
+    % \caption{}
+  \end{subfigure}
+  \begin{subfigure}[t]{0.49\textwidth}
+    \center\scalebox{0.30}[0.30]{\includegraphics{Plots/sam_gail_InvertedPendulum_s0-1-2-3_d16_results_log}}
+    % \caption{}
+  \end{subfigure}
+  \begin{subfigure}[t]{0.49\textwidth}
+    \center\scalebox{0.30}[0.30]{\includegraphics{Plots/sam_gail_InvertedDoublePendulum_s0-1-2-3_d4_results_log}}
+    % \caption{}
+  \end{subfigure}
+  \begin{subfigure}[t]{0.49\textwidth}
+    \center\scalebox{0.30}[0.30]{\includegraphics{Plots/sam_gail_InvertedDoublePendulum_s0-1-2-3_d16_results_log}}
+    % \caption{}
+  \end{subfigure}
+  \begin{subfigure}[t]{0.49\textwidth}
+    \center\scalebox{0.30}[0.30]{\includegraphics{Plots/sam_gail_Reacher_s0-1-2-3_d4_results_log}}
+    % \caption{}
+  \end{subfigure}
+  \begin{subfigure}[t]{0.49\textwidth}
+    \center\scalebox{0.30}[0.30]{\includegraphics{Plots/sam_gail_Reacher_s0-1-2-3_d16_results_log}}
+    % \caption{}
+  \end{subfigure}
+  \begin{subfigure}[t]{0.49\textwidth}
+    \center\scalebox{0.30}[0.30]{\includegraphics{Plots/sam_gail_Hopper_s0-1-2-3_d16_results_log}}
+    % \caption{}
+  \end{subfigure}
+  \begin{subfigure}[t]{0.49\textwidth}
+    \center\scalebox{0.30}[0.30]{\includegraphics{Plots/sam_gail_Hopper_s0-1-2-3_d32_results_log}}
+    % \caption{}
+  \end{subfigure}
+  \begin{subfigure}[t]{0.49\textwidth}
+    \center\scalebox{0.30}[0.30]{\includegraphics{Plots/sam_gail_Walker2d_s0-1-2-3_d16_results_log}}
+    % \caption{}
+  \end{subfigure}
+  \begin{subfigure}[t]{0.49\textwidth}
+    \center\scalebox{0.30}[0.30]{\includegraphics{Plots/sam_gail_Walker2d_s0-1-2-3_d32_results_log}}
+    % \caption{}
+  \end{subfigure}
+  \caption{
+    Performance comparison between SAM and GAIL in terms of episodic return.
+    The horizontal axis depicts, in logarithmic scale, the number of interactions
+    with the environment.
+    While there is no ambiguity for GAIL, we used the unperturbed SAM
+    policy $\mu_\theta$
+    (without parameter noise and additive action noise) to collect those returns
+    during a per-iteration evaluation phase.
+    The figure shows that our method has a considerably better
+    sample-efficiency than GAIL in various continuous control tasks,
+    often by several orders of magnitude.
+    Red-colored lines and filled areas indicate the performance range of the expert
+    demonstrations present in the training set.
+    The meaning of the different line styles and colors is given in-text.
+  }
+  \label{fig:resplots}
+\end{figure}
+
+Our agents were trained in physics-based control environments,
+built with the \textsc{MuJoCo} physics engine \cite{Todorov2012-gc},
+and wrapped via the OpenAI Gym
+\cite{Brockman2016-un} API.
+Tasks simulated in the environments range from legacy balance-oriented tasks to
+simulated robotics and locomotion tasks of various complexities.
+In this work, we consider the 5 following environments,
+ordered by increasing complexity (aligned with their respective degrees of freedom in state and action spaces,
+\textit{cf.}~\textsc{Table}~\ref{envtablesam}
+in \textsc{Section}~\ref{studiedenvs}):
+\texttt{InvertedPendulum},
+\texttt{InvertedDoublePendulum},
+\texttt{Reacher},
+\texttt{Hopper},
+\texttt{Walker2d}.
+In the experiments presented in \textsc{Figure}~\ref{fig:resplots},
+we explore how the performance of SAM
+and that of GAIL evolve as a function of the number of interactions
+they have with the environment.
+
+For each environment, an expert was designed by training an agent for 10M
+timesteps using the Proximal Policy Optimization (PPO) algorithm
+\cite{Schulman2017-ou} (with Generalized Advantaged Estimation, or GAE \cite{Schulman2016-ym}).
+The episode horizon (maximum episode length) was left to its default value per
+environment.
+We created a dataset of expert trajectories per environment.
+For every environment,
+we evaluated the performance of the agents
+when provided with various quantities of demonstrations,
+sampled for the demonstration dataset associated with the environment.
+We do so in order to explore how the two methods behave
+with respect to the number of demonstrations to which they are exposed.
+Both models are shown the same set of selected trajectories.
+We ensure that the two
+compared models are trained on exactly the same subset of extracted
+trajectories by training them with the same random seeds.
+We varied the cardinality of the set of selected trajectories
+as a function of the environment's complexity.
+We ran every experiment on the same range of 4 random seeds, namely
+$\{0, 1, 2, 3\}$.
+In \textsc{Figure}~\ref{fig:resplots}, we use scatter plots to visualise every
+episodic return, for every random seed.
+Solid blue and green lines represent the mean episodic return across the
+random seeds for the given number of interactions.
+The filled areas are confidence intervals around the solid lines,
+corresponding to a fixed fraction of the standard deviation around the mean
+for the given number of interactions.
+Every item coloured in red relates to the expert performance,
+for a given environment.
+The solid red line corresponds to the mean episodic return of the
+demonstrations present in the expert dataset associated with the given
+environment.
+The filled red region is a trust region whose width is equal to the
+standard deviation of returns in the expert dataset.
+The dotted line depicts the minimum return in the demonstration dataset while the
+dashed line represents the maximum.
+Having statistics about the demonstration datasets is particularly insightful
+when evaluating the results of experiments dealing with few demonstrations.
+
+Every experiment runs with 4 parallel instantiations of the same model,
+initialised with different seeds.
+Each instantiation has its own interaction with the environment,
+its own replay buffer and its own optimisers.
+However, every iteration, the gradients are averaged per module
+across instantiations and the
+averaged gradients are distributed per module
+to every instantiation and immediately used to update the respective module
+parameters.
+Both SAM and GAIL experiments were run under this setting.
+This vertical scalability played a considerable role
+in speeding up training phases, equivalently for both models.
+Since every instantiation has its own random seed, the fairness of our
+performance comparison between SAM and GAIL is further
+strengthened \cite{Duan2016-lg,Henderson2018-vm}.
+We used layer normalisation \cite{Ba2016-bs} in the policy module.
+Indeed, applying layer normalisation to every layer of the policy
+was instrumental in yielding better results,
+in line with the observations reported in \cite{Plappert2018-rl}.
+To ensure symmetry within the actor-critic architecture, we also applied
+layer normalisation to the critic module.
+\textsc{Pop-Art} \cite{Van_Hasselt2016-bh}
+was also useful to our architecture as our learned reward
+would sometimes output scores of various magnitudes.
+Applying \textsc{Pop-Art} helped in overcoming the various scales.
+
+Finally, note, \emph{SAM and GAIL implementations use exactly the same
+discriminator implementation}.
+
+We provide architecture, hyperparameter, implementation,
+and other details in the supplementary material.
+We also provide video visualisations at
+\url{https://youtu.be/-nCsqUJnRKU},
+as well as the code associated with this work at
+\url{https://github.com/lionelblonde/sam-tf}.
+
+The sample-efficiency we gain over GAIL is considerable:
+SAM needs one or two orders of magnitude less interactions with the
+environment
+to attain asymptotic expert performance.
+Note that the horizontal axis is scaled logarithmically.
+Additionally, we observe in \textsc{Figure}~\ref{fig:resplots} that
+GAIL agents sometimes fall short of reaching the demonstrator's
+asymptotic performance (\textit{e.g.}~\texttt{Reacher} and \texttt{InverseDoublePendulum}).
+While GAIL requires full traces of agent--environment interaction
+per iteration as it relies on Monte-Carlo estimates,
+SAM
+only requires a couple of transitions per iteration since it performs
+policy evaluation via temporal-difference learning.
+Instead of sampling transitions from the environment, performing an update and
+discarding the transitions,
+SAM keeps experiential data in memory and can therefore leverage
+decorrelated
+transitions collected in previous iterations to perform an off-policy update.
+Our method therefore requires considerably fewer new samples (interactions)
+per iteration, as
+it can re-exploit the transitions previously experienced.
+
+Since our approach trades interactions with
+the environment with replays with past experiences
+to extract more knowledge out of past interactions,
+echoing fictitious play in game theory,
+it generally takes a longer wall-clock time to train imitation policies.
+However, in real-world scenarios (\textit{e.g.}~robotic
+manipulation, autonomous cars), reducing the required interaction with the
+world is significantly more desirable, for safety and cost reasons.
+
+\section{Conclusion}
+
+In this work, we introduced a method, called
+\textit{Sample-efficient Adversarial Imitation Learning} (SAM),
+that meaningfully overcomes one
+considerable drawback of
+GAIL \cite{Ho2016-bv}:
+the number of interactions between agent and environment that it requires to learn
+expert-like policies.
+We demonstrate that our method shrinks the number of interactions by an order
+of magnitude, and sometimes more.
+Leveraging an off-policy procedure was key to that success.
