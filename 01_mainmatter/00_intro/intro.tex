@@ -196,7 +196,7 @@ From the practitioner's standpoint, it might look like the agent is malevolently
 it was asked to complete, while in effect, it merely was not able to understand the intent behind the
 reward signal crafted purposely by the practitioner to induce the desired (unachieved) behavior.
 Such a phenomenon has been aptly dubbed reward \textit{hacking}, or reward \textit{hijacking}, or
-even reward \textit{corruption}, \textit{cf.} OpenAi's blog post \cite{Amodei2016-vg}
+even reward \textit{corruption}, \textit{cf.} OpenAI's blog post \cite{Amodei2016-vg}
 for an animated account on faulty reward function and companion paper \cite{Amodei2016-tb} for
 guidelines and pointers on reward modelling.
 
@@ -348,18 +348,18 @@ as both are built upon the same principle of optimality to derive optimal behavi
 Said principle of optimality will be laid out momentarily.
 
 Albeit constructed from the same foundational basis to craft agents that act optimally,
-the two approaches and the algorithms that follow their respective paradigms differ what what they assume
+the two approaches and the algorithms that follow their respective paradigms differ by what they assume
 is known about the world, and therefore what they are allowed to leverage from this knowledge.
 Not to be mistaken for its computer science counterpart
 (although its underlying, defining pattern of \textit{overlapping sub-problems}
 fits the considered control theory interpretation too),
-dynamic programming \emph{need} not access to a perfect model of the environment.
+dynamic programming \emph{need} access to a perfect model of the environment.
 Besides, the latter need be modeled as a MDP,
 which concretely allows the artificial agent to evaluate the probability of a transition $(s,a \to s')$
 to occur by having access to $p$, or the probability of receiving the reward $r$ upon executing $a$ in $s$
 by being also granted access to $u$ from the decision process,
 $\forall \, s, s' \in \mathcal{S}$, $\forall a \in \mathcal{A}$, $\forall r \in \mathbb{R}$.
-By having perfect knowledge about how the environment reacts to its decisions,
+By having perfect knowledge about how the environment react to its decisions,
 the agent can simulate and evaluate any possible future, and plan on it over.
 It need not experience the world itself, as it can foresee and forecast \textit{in silico} what it ought to do,
 and how its projected trajectories would roll out in the MDP.

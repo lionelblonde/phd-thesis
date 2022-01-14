@@ -322,6 +322,7 @@ and $\rho_0$ denotes the initial state probability density.
 $u$ denotes a stationary \emph{reward process}
 that assigns, to any state-actions pairs,
 a real-valued reward $r_t$ distributed as $r_t \sim u(\cdot | s_t, a_t)$.
+
 Finally, $\gamma \in [0, 1)$ is the discount factor.
 We make the MDP \emph{episodic}
 by positing the existence of an absorbing state in every trace of interaction and
@@ -1825,7 +1826,7 @@ As soon as GP is in use, the agent achieves near-expert performance
 \textit{In fine}, \textsc{Figure}~\ref{resplotsnogp} shows that
 \emph{without} GP, neither SN nor LS are enough to enable the agent
 to mimic the expert with high fidelity,
-while \textsc{Figure}~\ref{resplotsgp}  and \textsc{Figure}~\ref{resplotsgp2}
+while \textsc{Figure}~\ref{resplotsgp} and \textsc{Figure}~\ref{resplotsgp2}
 show that \emph{with} GP,
 extra methods such as LS barely improve performance.
 These results support our claim: gradient penalty is, (\emph{empirically})
@@ -3968,7 +3969,7 @@ where $C \coloneqq A^2 \max(1, B^2)$ is the time-independent counterpart of $C_t
 &= \dv*{\tilde{r}_\varphi (s_{t+k+1}, a_{t+k+1})}{s_t} \\
 &= \kappa_{t+k+1} \dv*{r_\varphi (s_{t+k+1}, a_{t+k+1})}{s_t}
 \qquad
-\blacktriangleright\text{\small{\textit{we here assume that $\dv*{\kappa_{t+k+1}}{s_t}$}}} \\
+\blacktriangleright\text{\small{\textit{we here assume that $\dv*{\kappa_{t+k+1}}{s_t} = 0$}}} \\
 &= \kappa_{t+k+1} \, \nabla_s^t[r_\varphi]_{t+k+1}
 \qquad
 \blacktriangleright\text{\small{\textit{repack}}}
@@ -3978,7 +3979,7 @@ where $C \coloneqq A^2 \max(1, B^2)$ is the time-independent counterpart of $C_t
 &= \dv*{\tilde{r}_\varphi (s_{t+k+1}, a_{t+k+1})}{a_t} \\
 &= \kappa_{t+k+1} \dv*{r_\varphi (s_{t+k+1}, a_{t+k+1})}{a_t}
 \qquad
-\blacktriangleright\text{\small{\textit{we here assume that $\dv*{\kappa_{t+k+1}}{a_t}$}}} \\
+\blacktriangleright\text{\small{\textit{we here assume that $\dv*{\kappa_{t+k+1}}{a_t} = 0$}}} \\
 &= \kappa_{t+k+1} \, \nabla_a^t[r_\varphi]_{t+k+1}
 \qquad
 \blacktriangleright\text{\small{\textit{repack}}}

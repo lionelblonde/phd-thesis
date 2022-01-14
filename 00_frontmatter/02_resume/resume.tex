@@ -5,3 +5,120 @@
 \thispagestyle{empty}
 \chapter*{Résumé}
 % \addcontentsline{toc}{chapter}{Résumé}
+
+Les travaux de recherche décris dans cette thèse visent les faiblesses majeures
+de l'apprentissage par renforcement; branche de l'apprentissage automatique
+qui tâche de concevoir des agents interactifs autonomes capables de choisir la
+sequence de decisions accompagnée des plus fortes récompenses.
+De tels agents dependent donc fortement de la façon dont laquelle ces récompenses sont formulées.
+Concevoir des récompenses parvenant à guider l'agent vers la résolution de la tâche à laquelle
+il fait face est laborieux et requiert de nombreuses interventions et réajustements.
+Ces derniers s'avèrent souvent onéreux et dangeureux en raison de la nature intéractive de
+l'apprentissage de l'agent qui apprend en intéragissant avec son environment.
+L'apprentissage par imitation n'est en revanche pas entravé par l'assemblage minutieux
+d'un signal de récompense, qui pourrait même ne pas être \textit{in fine} aligné avec la
+tâche que l'agent doit résoudre.
+Au lieu de l'accumuler un maximum de récompenses lors de ses interractions avec son
+environment, l'agent doit imiter le comportement d'un expert,
+qui est supposé \textit{a priori} optimal pour la tâche à accomplir, et
+qui lui est communiqué par l'intermediaire de démonstrations.
+Même si ces méthodes évitent l'étape préliminaire consistant à aligner un signal
+de récompense avec la tâche à résoudre, les meilleures methodes d'apprentissage
+par imitation demeuraient couteuse en terme du nombre d'interactions que l'agent
+devait effectuer avec l'environment avant d'espérer adopter un comportement proche
+de celui de l'expert.
+
+\emph{%
+Ainsi, nous cherchons dans un premier temps
+à reduire le nombre d'échantillons dont la méthode de pointe,
+l'apprentissage par imitation antagoniste generative,
+a besoin pour imiter l'expert.
+Pour ce faire, nous rendons la méthode ``off-policy'',
+ce qui permet à l'agent d'extraire davantage d'information de ses interactions passées
+en les préservant en mémoire et s'en remémorant occasionnelement.
+Malgré l'instabilité notoire des méthodes impliquées
+--- apprentissage ``off-policy'' et methodes antagonistes generatives ---
+notre nouvelle méthode est quant à elle remarquablement stable,
+et reduit le nombre d'interactions nécessaires d'au moins un ordre de grandeur.
+}
+
+\emph{%
+Afin d'élucider pour quelles exactes raisons la méthode d'imitation
+dévelopée reste si stable en dépit des fortes chances de divergence,
+nous étudions la méthode proposée en profondeur.
+Ainsi, dans un deuxième temps, nous démontrons que,
+afin d'assurer la stabilité de la méthode,
+la fonction de récompense apprise de façon antagoniste doit
+être une application lipschitzienne.
+Nous étudions les effets de cette condition nécessaire et dérivons plusieurs
+résultats théoriques caractérisant la fonction de valeur état-action,
+communément notée ``Q''.
+Ces garanties sont complémentées de preuves empiriques attestant de l'importance
+qu'ont les contraintes encourageant la récompense apprise
+à une application lipschitzienne
+sur la performance de l'agent.
+Enfin, nous focalisons notre attention sur une large classe de préconditioneurs
+visant à être appliqués à la récompense, et montrons via plusieurs garanties théoriques
+que les membres de la classe introduite rendent les récompenses auxquelles ils sont
+appliqués plus robuste.
+Les garanties dérivées s'étendent à toutes les récompenses lipschitziennes;
+elles ne se limitent pas à l'apprentissage par imitation.
+}
+
+Imiter le comportement d'un tier agent ne fait sens que lorsque ce dernier agis de
+façon optimale, mais l'obtention de démonstrations d'un tel expert est loin d'être
+une mince affaire, et devient vite laborieux lorsque les objectifs s'avèrent complexes.
+Des traces d'interaction décrites par un comportement sous-optimal sont bien plus
+facile à obtenir (\textit{e.g.}~capteurs d'une voiture autonome prenant continuellement
+des mesures lors de chaque navigation).
+Ainsi, après avoir étudié l'apprentissage de comportement interactif
+à partir de données provenant d'un expert supposé optimal,
+nous considérons, dans un troisième temps,
+la situation dans laquelle ces données de source(s) extérieure(s)
+sont potentiellement sous-optimales,
+et la traitons par apprentissage par renforcement hors-ligne (ou ``offline'').
+Alors que l'agent qui apprenait par imitation ne recevait pas de récompense
+de son environement, il était tout du moins autorisé à interagir avec ce dernier.
+Pour l'agent qui apprend par renforcement hors-ligne, la situation est inversée.
+L'agent a accès a un historique d'experiences correspondant aux intéractions passées
+d'un ou de plusieurs autres agents, où chaque situation et décision prise
+par le tiers agent en question
+est annoté de la récompense qu'il a perçu lorsque la décision a été exécutée.
+En revanche, étant hors-ligne, l'agent ne peut lui-même pas interagir avec son environment,
+et ne peut de ce fait pas observer l'effet de ses propres décisions alors qu'il essaie de
+s'améliorer.
+
+\emph{%
+La performance d'agents apprenant par renforcement hors-ligne fluctue grandement en fonction
+de la qualité des données, qui peut varier
+sur une échelle allant de
+``loin d'être optimal'' (\textit{e.g.} aléatoires)
+à ``près d'être optimal''.
+En nous reposant sur notre ré-implémentation des méthodes de pointe d'apprentissage par
+renforcement hors-ligne au sein d'un système unifié,
+nous montrons que lorsqu'une de ces méthodes de pointe surpasse ses concurrentes
+sur une extremité de l'echelle, elle ne les surpasse \emph{jamais} sur l'autre extremité.
+Ce motif récurrent nous empêche de nommer un vainqueur sur l'intégralité de l'échelle de qualité.
+Nous attribuons cette asymétrie au biais inductif qu'injecte ces méthodes dans leur agents
+réspectifs, où le biais en question pousse l'agent à partir du principe que le
+comportement décris dans les données hors-ligne est \emph{optimal} pour la tâche
+à effectuer.
+Plus il y a de biais injecté, meilleur sera l'agent \emph{à condition que}
+le dataset hors-ligne soit ``près d'être optimal''.
+Sinon, l'injection a un effet néfaste.
+Nous les nommons biais inductif d'optimalité.
+En nous fondant sur une méthode de régression pondéré par la function valeur état-action,
+nous menons une investigation qui corrobore que l'injection de bias inductif d'optimalité
+reduit considérablement la performance de l'agent sur des données sont sous-optimales,
+si cette injection n'est pas effectuée avec parcimonie.
+Afin de concevoir une classe de méthodes qui permettrait à l'agent d'avoir de bonnes
+performance sur l'intégralité de l'echelle de qualité,
+nous revisitons le schéma de l'itération de politique généralisée.
+Nous étudions l'impact de nouvelles distributions sur l'espace de décisions
+dans le cadre d'une généralisation spécifique au régime hors-ligne
+de ce schéma que nous introduisons.
+Nos études montrent qu'il existent des orchestrations de distributions dans la
+généralisation proposée qui permettent à l'agent d'aboutir à un bon équilibre
+de performance où l'agent devient bien plus
+compétitif sur l'intégralité de l'échelle de qualité de données.
+}
