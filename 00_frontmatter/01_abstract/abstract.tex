@@ -27,7 +27,6 @@ Depite alleviating the reliance on potentially satefty-critical reward modelling
 state-of-the-art imitation learning agents still suffered from severe sample-inefficiency in the
 number of interactions that need be carried out in the environment.
 
-\emph{%
 As such, we first set out to address the high sample complexity
 suffered by Generative Adversarial Imitation Learning, the state-of-the-art approach
 to performing imitation (albeit sample-inefficient).
@@ -37,9 +36,7 @@ Albeit coordinating infamously unstable routines --- adversarial learning, and o
 our novel method remains remarkably stable, and dramatically shrinks the amount of interactions with the
 environment necessary to learn well-behaved imitation policies,
 by up to several orders of magnitude.
-}
 
-\emph{%
 In an attempt to decipher and ultimately understand what made
 the previous method so stable in practice despite overwhelming odds of instability, we
 perform an in-depth review, qualitative and quantitative, of the method.
@@ -58,11 +55,10 @@ We then discuss these through a fine-grained lens and share our insights.
 Crucially, the derived guarantees are valid for \emph{any} reward
 satisfying the Lipschitzness condition, nothing is specific to imitation.
 As such, these may be of independent interest.
-}
 
 While imitation learning seems difficult to outperform
 once the agent has access to past experiences from an expert behaving optimally,
-the performance of the mimicking agent quickly deteriorates as the expert stray from optimality.
+the performance of the mimicking agent quickly deteriorates as the expert strays from optimality.
 Intuitively, it stands to reason that the agent should only imitate another if the latter
 solves the task (near-) optimally. If not, then imitation is not a well suited approach.
 
@@ -74,7 +70,7 @@ are far more readily available
 (\textit{e.g.}~due to continually recording sensors present in robots, cars).
 As such, after studying how to \emph{only learn from an external source} of \emph{putatively optimal} data coming
 from an expert policy, we then study how to \emph{only learn from an external source} of
-\emph{putatively sub-optimal} data provided through a arbitrary dataset ---
+\emph{putatively sub-optimal} data provided through an arbitrary dataset ---
 this last one is the \emph{offline} reinforcement learning setting.
 
 While in the imitation learning setting we had no reward from the environment,
@@ -86,7 +82,6 @@ Yet, the agent learned via offline reinforcement learning
 is not allowed to interact with the world, and is therefore unable to witness its \emph{own} impact on it when trying
 to make better decisions in it.
 
-\emph{%
 The performance of state-of-the-art baselines in the offline reinforcement learning regime varies widely over the
 spectrum of dataset qualities --- ranging from \textit{``far-from-optimal''} random data
 to \textit{``close-to-optimal''} expert demonstrations.
@@ -108,7 +103,6 @@ newly-introduced proposal distributions over actions, involved in the proposed g
 policy evaluation and policy improvement update rules.
 We show that certain orchestrations strike the right balance and can improve the performance on one end of the spectrum
 \emph{without} harming it on the other end.
-}
 
 In neither of the two studied settings
 (\textit{a)} imitation learning and \textit{b)} offline reinforcement learning)
@@ -121,5 +115,3 @@ can be cast as counterfactual learning,
 in which sequential decision-making agents must learn how to interact with their world,
 only from traces that \textit{a priori} do not coincide with their own.
 \textit{In fine}, we are concerned with decision makers that learn from the choices of others.
-
-

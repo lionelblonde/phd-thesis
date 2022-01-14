@@ -28,7 +28,6 @@ par imitation demeuraient couteuse en terme du nombre d'interactions que l'agent
 devait effectuer avec l'environment avant d'espérer adopter un comportement proche
 de celui de l'expert.
 
-\emph{%
 Ainsi, nous cherchons dans un premier temps
 à reduire le nombre d'échantillons dont la méthode de pointe,
 l'apprentissage par imitation antagoniste generative,
@@ -40,9 +39,7 @@ Malgré l'instabilité notoire des méthodes impliquées
 --- apprentissage ``off-policy'' et methodes antagonistes generatives ---
 notre nouvelle méthode est quant à elle remarquablement stable,
 et reduit le nombre d'interactions nécessaires d'au moins un ordre de grandeur.
-}
 
-\emph{%
 Afin d'élucider pour quelles exactes raisons la méthode d'imitation
 dévelopée reste si stable en dépit des fortes chances de divergence,
 nous étudions la méthode proposée en profondeur.
@@ -63,7 +60,6 @@ que les membres de la classe introduite rendent les récompenses auxquelles ils 
 appliqués plus robuste.
 Les garanties dérivées s'étendent à toutes les récompenses lipschitziennes;
 elles ne se limitent pas à l'apprentissage par imitation.
-}
 
 Imiter le comportement d'un tier agent ne fait sens que lorsque ce dernier agis de
 façon optimale, mais l'obtention de démonstrations d'un tel expert est loin d'être
@@ -88,7 +84,6 @@ En revanche, étant hors-ligne, l'agent ne peut lui-même pas interagir avec son
 et ne peut de ce fait pas observer l'effet de ses propres décisions alors qu'il essaie de
 s'améliorer.
 
-\emph{%
 La performance d'agents apprenant par renforcement hors-ligne fluctue grandement en fonction
 de la qualité des données, qui peut varier
 sur une échelle allant de
@@ -121,4 +116,3 @@ Nos études montrent qu'il existent des orchestrations de distributions dans la
 généralisation proposée qui permettent à l'agent d'aboutir à un bon équilibre
 de performance où l'agent devient bien plus
 compétitif sur l'intégralité de l'échelle de qualité de données.
-}

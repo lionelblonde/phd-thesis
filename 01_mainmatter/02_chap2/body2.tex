@@ -1321,7 +1321,7 @@ A model that generalizes well displays low errors on the train set (trained on)
 and particularly also on the test set (never seen before).
 When a model achieves low error on the train set and high error on the test set, it is said to \emph{overfit}.
 That is, it has \emph{memorized} the intended pattern on the data it has been shown,
-but what was learn critically \emph{does not generalize} to new data. Avoiding overfitting is therefore paramount.
+but what was learned critically \emph{does not generalize} to new data. Avoiding overfitting is therefore paramount.
 
 Being based on a binary classifier, the synthetic reward process $r_\varphi$ is
 inherently susceptible to overfitting, and it has been shown (\textit{cf.} subsequent references)
@@ -1667,7 +1667,7 @@ in its own learning update.
 Since the parameters are synced across workers before the learning process kicks off,
 this \emph{synchronous} gradient-averaging scheme
 ensures that the workers all have the same parameters
-throughout the entire learning process (same initial parameters, when same updates).
+throughout the entire learning process (same initial parameters, then same updates).
 This distributed training scheme leverages learners seeded differently in their own
 environments, also seeded differently, to accelerate exploration, and above all
 provide the model with greater robustness.
@@ -1778,7 +1778,7 @@ of the expert's returns, aggregated across the set of $10$ demonstrations used i
 \end{figure}
 
 We now go over our first set of empirical results, whose goal is to show
-to what extend gradient penalty regularization is needed.
+to what extent gradient penalty regularization is needed.
 The compared methods all use SAM (\textit{cf.} \textsc{Section}~\ref{bridge})
 as base.
 
@@ -1922,7 +1922,7 @@ The wrapping mechanism
 which we described in \textsc{Section}~\ref{bridge} ---
 is used in every experiment reported in \textsc{Figure}~\ref{resplotsredpu},
 \emph{including RED}.
-In addition, note, we only use GP in the adversarial context it we introduced it in.
+In addition, note, we only use GP in the adversarial context we introduced it in.
 We do not use GP with RED.
 Each technique is re-implemented based on the associated paper,
 with the same hyper-parameters, with the exception of RED:
@@ -2697,7 +2697,7 @@ and as such mitigates value overfitting which
 deterministic policies are prone to.
 While its smoothing effect on the value function is somewhat intuitive,
 we set out to investigate formally how target policy smoothing
-affects the optimization dynamics, and particularly to what extent is smooths out
+affects the optimization dynamics, and particularly to what extent it smooths out
 the state-action value landscape.
 Since the function approximator $Q_\omega$ is optimized as a supervised learning problem
 using the traditional squared loss criterion, we first study how perturbing the inputs with
