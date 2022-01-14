@@ -407,7 +407,7 @@ said assertion lowers.
 In this work, the neural network function approximator modeling $D_\varphi$
 uses a sigmoid as output layer activation, \textit{i.e.} $D_\varphi \in [0, 1]$.
 The exact zero case is bypassed numerically for $\log \circ D_\varphi$ to always exist,
-by adding an infinitesimal value $\epsilon > 0$ to $D_\varphi$ inside the logarithm.
+by adding an infinitesimal value $\varepsilon > 0$ to $D_\varphi$ inside the logarithm.
 The same numerical stability trick is used for $\log \circ (1 - D_\varphi)$ to avoid the exact one case
 (\textit{cf.} reward formulations in \textsc{Section}~\ref{bridge}).
 
@@ -471,9 +471,9 @@ and action space by adding the temporally-correlated response
 of an Ornstein-Uhlenbeck noise process \cite{Uhlenbeck1930-an,Lillicrap2016-xa}
 to the action returned by $\mu_\theta$.
 Formally, in state $s_t$, action $a_t$ is sampled from
-$\pi_\theta(\cdot | s_t) \coloneqq \mu_{\theta + \epsilon}(s_t) + \eta_t$,
-where $\epsilon \sim \mathcal{N}(0, \sigma_a^2)$ ($\sigma_a$ adapts conservatively such that
-$|\mu_{\theta + \epsilon}(s_t) - \mu_\theta(s_t)|$ remains below a certain threshold),
+$\pi_\theta(\cdot | s_t) \coloneqq \mu_{\theta + \varepsilon}(s_t) + \eta_t$,
+where $\varepsilon \sim \mathcal{N}(0, \sigma_a^2)$ ($\sigma_a$ adapts conservatively such that
+$|\mu_{\theta + \varepsilon}(s_t) - \mu_\theta(s_t)|$ remains below a certain threshold),
 and where $\eta_t$ is the response of the Ornstein-Uhlenbeck process \cite{Uhlenbeck1930-an}
 $\mathfrak{N}_{OU}$ at timestep $t$ in the episode,
 such that $\eta_t \coloneqq \mathfrak{N}_{OU}(t, \sigma_b)$.
@@ -3092,17 +3092,17 @@ $a' \sim \beta$ (\textit{cf.} \textsc{Section}~\ref{bridge}).
 As for the penalty target, \cite{Gulrajani2017-mr} use $k=1$, in line with the theoretical
 result derived by the authors.
 By contrast, DRAGAN \cite{Kodali2017-xt} use a $\zeta$ such that
-$a \sim \zeta$ means $a = a'' + \epsilon$, where $a'' \sim \pi_e$,
-and $\epsilon \sim \mathcal{N}(0, 10)$.
+$a \sim \zeta$ means $a = a'' + \varepsilon$, where $a'' \sim \pi_e$,
+and $\varepsilon \sim \mathcal{N}(0, 10)$.
 Like WGAN-GP \cite{Gulrajani2017-mr}, DRAGAN uses the penalty target $k=1$.
 Finally, for the sake of symmetry, we introduce a reversed version of DRAGAN,
 dubbed NAGARD (name reversed).
 To the best of our knowledge, the method has not been explored in the literature.
 NAGARD also uses $k=1$ as penalty target, but perturbs the policy-generated samples
 as opposed to the expert ones:
-$a \sim \zeta$ means $a = a' + \epsilon$, where $a' \sim \beta$
+$a \sim \zeta$ means $a = a' + \varepsilon$, where $a' \sim \beta$
 (\emph{off}-policy setting),
-and $\epsilon \sim \mathcal{N}(0, 10)$.
+and $\varepsilon \sim \mathcal{N}(0, 10)$.
 We use $\lambda=10$ in all the variants, in line with the original
 hyper-parameter settings in \cite{Gulrajani2017-mr} and \cite{Kodali2017-xt}.
 
@@ -4365,42 +4365,42 @@ Consider the following particular form for the preconditioner $\kappa_t$,
 $\forall t \in [0, T] \cap \mathbb{N},
 \forall (s_t, a_t) \in \mathcal{S} \times \mathcal{A}$:
 \begin{align}
-\kappa_t \coloneqq \exp (-\alpha \, \epsilon_t)
+\kappa_t \coloneqq \exp (-\alpha \, \varepsilon_t)
 \quad \implies \quad
 \tilde{r}_\varphi (s_t,a_t)
 \coloneqq \kappa_t \, r_\varphi (s_t,a_t)
-\coloneqq \exp (-\alpha \, \epsilon_t) \, r_\varphi (s_t,a_t)
+\coloneqq \exp (-\alpha \, \varepsilon_t) \, r_\varphi (s_t,a_t)
 \label{precondrewexp}
 \end{align}
 where $\alpha$ is an inverse temperature hyper-parameter involved in the definition of the kernel of
-the Boltzmann or Gibbs probability distribution $\kappa_t \coloneqq \exp (-\alpha \, \epsilon_t)$,
+the Boltzmann or Gibbs probability distribution $\kappa_t \coloneqq \exp (-\alpha \, \varepsilon_t)$,
 (hence $0 < \kappa_t \leq 1$), and where
-$\epsilon_t \geq 0$ (\textit{for now}) depicts an arbitrary non-negative energy function.
+$\varepsilon_t \geq 0$ (\textit{for now}) depicts an arbitrary non-negative energy function.
 Albeit in the unit ball
 $\forall t \in [0, T] \cap \mathbb{N}$,
 $\forall (s_t, a_t) \in \mathcal{S} \times \mathcal{A}$, and aligned with the kernel of a
 probability distribution (Boltzmann or Gibbs),
 $\kappa_t$ is non-normalized and as such is \emph{not} a probability \textit{per se}.
 Nonetheless, it still echoes the proposensity or tendency of the state-action pair $(s_t,a_t)$
-to possess the property described by the non-negative energy $\epsilon_t$, which we define momentarily.
-Low values of $\epsilon_t \geq 0$
+to possess the property described by the non-negative energy $\varepsilon_t$, which we define momentarily.
+Low values of $\varepsilon_t \geq 0$
 will push the preconditioner towards the upper limit $\kappa_t \to 1$,
 while high energy values will make it tend towards the lower limit $\kappa_t \to 0$ with $\kappa_t > 0$.
 Equivalently, the preconditioned reward $\tilde{r}_\varphi$ will verify the approximate identity
-$\tilde{r}_\varphi (s_t,a_t) \approx r_\varphi (s_t,a_t)$ whenever $\epsilon_t$
+$\tilde{r}_\varphi (s_t,a_t) \approx r_\varphi (s_t,a_t)$ whenever $\varepsilon_t$
 approaches zero (from above), and $\tilde{r}_\varphi (s_t,a_t) \approx 0$ whenever
-the energy $\epsilon_t$ grows towards higher levels.
+the energy $\varepsilon_t$ grows towards higher levels.
 In particular,
 the soft approximate $\mathfrak{C}$-validity pseudo-indicator
 (\textit{cf.}~\textsc{eq}~\ref{pseudoindicator})
 is an instantiation of the $\kappa_t$ form laid out in \textsc{eq}~\ref{precondrewexp},
 where $\alpha=1$ for the inverse temperature, and
-$\epsilon_t = \max (0, \lVert \nabla_{s_t,a_t} \, D_\varphi (s_t,a_t) \rVert - k)^2$ for the energy.
+$\varepsilon_t = \max (0, \lVert \nabla_{s_t,a_t} \, D_\varphi (s_t,a_t) \rVert - k)^2$ for the energy.
 In such an instance, $\tilde{r}_\varphi (s_t,a_t) \approx r_\varphi (s_t,a_t)$
 whenever the pair $(s_t,a_t)$ is approximately $\mathfrak{C}$-valid, formally,
 $\lVert \nabla_{s,a}^t[D_\varphi]_t \rVert _F \leq k$.
 Conversely, in the extreme scenario where $\lVert \nabla_{s,a}^t[D_\varphi]_t \rVert _F \gg k$,
-$\epsilon_t$ grows large,
+$\varepsilon_t$ grows large,
 $\kappa_t$ is approximately equal to $0$,
 and $\tilde{r}_\varphi (s_t,a_t) \approx 0$.
 As such, in effect, the agent's policy $\mu_\theta$ is punished for selecting actions that do not satisfy the
@@ -4415,7 +4415,7 @@ can easily be satisfied $100\%$ of the time by regularizing $D_\varphi$ alone.
 For $D_\varphi$'s $k$-Lipschitzness to be ensured (validated empirically in \textsc{Section}~\ref{understand}),
 there is therefore no need to further artificially alter the rewards provided to the agent's policy $\mu_\theta$
 through PURPLE's pessimistic reward preconditioning add-on.
-Generally speaking, we will probably make the same observation whenever $\epsilon_t$ is defined from a constraint
+Generally speaking, we will probably make the same observation whenever $\varepsilon_t$ is defined from a constraint
 we want to enforce on a learned function approximation, for regularization purposes.
 Indeed, verifying said desideratum on the function approximator directly via the application of a regularizer seems
 to always be the easiest (since most direct) solution to encourage the satisfaction of a constraint on
@@ -4427,15 +4427,15 @@ is a particular case of the general class of constraints for which \emph{direct}
 On the flip side, due to the fact that the reward --- albeit learned as a parametric function ---
 is treated as an input in our computational graph,
 it is not differentiated through and \emph{can} consequently
-be augmented with non-differentiable nodes through the design of $\epsilon_t$ from \textsc{eq}~\ref{precondrewexp}.
+be augmented with non-differentiable nodes through the design of $\varepsilon_t$ from \textsc{eq}~\ref{precondrewexp}.
 In other words, even if it is preferable to apply regularization directly the objective of the regularized
 function approximator for it to satisfy some constraint,
 it might not always be possible to do so directly.
 In that case, guiding the policy towards areas of the state-action landscape that satisfy said constraint
 could be a surrogate solution, albeit far less preferable than acting on the targeted approximator directly.
-As such, by aligning $\epsilon_t$ with said constraint, \textsc{eq}~\ref{precondrewexp} offers a way for the policy
+As such, by aligning $\varepsilon_t$ with said constraint, \textsc{eq}~\ref{precondrewexp} offers a way for the policy
 to act in view of the satisfaction of said constraint \emph{while} enjoying the considerable advantage
-of being able to treat $\epsilon_t$ as a \emph{black box}.
+of being able to treat $\varepsilon_t$ as a \emph{black box}.
 We will leverage this \emph{universality} in the next discussion point.
 
 \subsubsection{Partial compensation of compounding variations}
@@ -4542,7 +4542,7 @@ to wrap the Jacobian of $f_\psi$
 (unlike $D_\varphi$, which returns scalars).
 We push $\mu_\theta$ towards areas where $\lVert\nabla_{s,a}^t[f_\psi]_t\rVert _F \leq \tau$
 --- \textit{i.e.}~where $f_\psi$ is $\tau$-Lipschitz-continuous ---
-by defining the energy function $\epsilon_t^\psi$ in the
+by defining the energy function $\varepsilon_t^\psi$ in the
 \emph{model-based} preconditioner $\kappa_t^\psi$ as a one-sided gradient penalty, as follows,
 $\forall t \in [0, T] \cap \mathbb{N},
 \forall (s_t, a_t) \in \mathcal{S} \times \mathcal{A}$:
@@ -4551,9 +4551,9 @@ $\forall t \in [0, T] \cap \mathbb{N},
 \coloneqq \kappa_t^\psi \, r_\varphi (s_t,a_t)
 \quad \text{where} \quad
 \begin{cases}
-\kappa_t^\psi &\coloneqq \max\big(\kappa_\text{min}, \exp \big(-\alpha \, \epsilon_t^\psi\big)\big)
+\kappa_t^\psi &\coloneqq \max\big(\kappa_\text{min}, \exp \big(-\alpha \, \varepsilon_t^\psi\big)\big)
 \quad \text{with} \\
-\epsilon_t^\psi &\coloneqq
+\varepsilon_t^\psi &\coloneqq
 \max \big(0, \lVert\nabla_{s,a}^t[f_\psi]_t\rVert _F - \tau\big)^2 \Big/ \sigma_\textsc{on}^\psi
 \end{cases}
 \label{precondrewf1}
@@ -4577,11 +4577,11 @@ inspired by the discussion laid out in in \cite{Burda2018-vl}
 on the importance of such normalization technique
 when the reward is grounded on a prediction loss.
 Considering the edge cases, and omitting here the clipping to $\kappa_\text{min}$,
-when $\epsilon_t^\psi$ is close to zero,
+when $\varepsilon_t^\psi$ is close to zero,
 $\kappa_t^\psi$ is approximately equal to $1$,
 \textit{i.e.} $\tilde{r}_\varphi (s_t,a_t) \approx r_\varphi (s_t,a_t)$
 (\textit{cf.}~\textsc{eq}~\ref{precondrewf1}, \ref{precondrewf2}).
-Conversely, in the extreme scenario where $\epsilon_t^\psi$ is very large
+Conversely, in the extreme scenario where $\varepsilon_t^\psi$ is very large
 (\textit{i.e.}~$\lVert\nabla_{s,a}^t[f_\psi]_t\rVert _F \gg \tau$),
 $\kappa_t^\psi$ is approximately equal to $0$,
 and $\tilde{r}_\varphi (s_t,a_t) \approx 0$.
