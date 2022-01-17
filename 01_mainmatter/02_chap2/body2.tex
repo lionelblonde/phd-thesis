@@ -623,21 +623,18 @@ $[\theta_{i - \Delta + 1}, \ldots, \theta_{i - 1}, \theta_i]$,
 where the mixing depends on $\mathcal{R}$'s retention window, and the number of collected
 samples (rollout size) per iteration.
 
-For the sake of legibility, we first introduce $\rho^\pi_{\mathbb{M}^*}$, denoting
-the \textit{discounted state visitation distribution}
+We first introduce $\rho^\pi_{\mathbb{M}^*}$, which denotes
+the discounted state visitation frequency
 of an arbitrary policy $\pi$ in $\mathbb{M}^*$.
-As the name hints, $\rho^\pi_{\mathbb{M}^*}$ takes a state $s \in \mathcal{S}$
-as input and maps onto
-the real segment $[0,1]$ by assigning it the probability of being visited
-by the policy $\pi$ when interacting with $\mathbb{M}^*$.
-It is also referred to as \emph{occupancy measure}.
 Formally,
 $\rho^\pi_{\mathbb{M}^*} (s)
 \coloneqq
 \sum_{t=0}^{+\infty} \gamma^t \mathbb{P}^\pi_{\mathbb{M}^*} [S_t=s]$,
 where $\mathbb{P}^\pi_{\mathbb{M}^*} [S_t=s]$ is the probability of reaching state $s$
-at timestep $t$ ($S_t$ being a random variable) when interacting with the MDP $\mathbb{M}^*$
+at timestep $t$ when interacting with the MDP $\mathbb{M}^*$
 by acting according to $\pi$.
+Since $\sum_{s \in \mathcal{S}} \rho^\pi_\mathbb{M}(s) = 1 / (1-\gamma)$,
+$\rho^\pi_\mathbb{M}$ can be seen as a probability distribution over states up to a constant factor.
 Due to the presence of the discount factor $\gamma$, $\rho^\pi_{\mathbb{M}^*} (s)$ has higher value
 if $s$ is visited earlier than later in the infinite-horizon trajectory.
 In practice, we relax the definition to its non-discounted counterpart and to
@@ -2071,7 +2068,7 @@ This property is satisfied by the usual neural network function approximators.
 The ``almost-everywhere'' case can be derived from this lemma without major changes
 (relevant when at least one activation function is only differentiable almost-everywhere, ReLU).
 \textbf{\emph{(a)}} Under the previous assumptions,
-for $k \in [0, T-1] \cap \mathbb{N}$ the following \textbf{recursive inequality} is verified:
+for $k \in [0, T-k-1] \cap \mathbb{N}$ the following \textbf{recursive inequality} is verified:
 \begin{align}
 \lVert \nabla_{s,a}^t[r_\varphi]_{t+k+1} \rVert ^2_F
 &\leq
@@ -3729,17 +3726,18 @@ Towards fulfilling the premise: a provably more robust way to further encourage 
 \label{purpleandres}
 
 We introduce two new entities, $\kappa_t$
-and $\tilde{r}_\varphi : \mathcal{S} \times \mathcal{A} \to \mathbb{R}$, formally defined as,
-$\forall t \in [0, T] \cap \mathbb{N},
-\forall (s_t, a_t) \in \mathcal{S} \times \mathcal{A}$:
+and $\tilde{r}_\varphi : \mathcal{S} \times \mathcal{A} \to \mathbb{R}$, formally defined as:
 \begin{align}
 \tilde{r}_\varphi (s_t,a_t)
 \coloneqq \kappa_t \, r_\varphi (s_t,a_t)
 \qquad
-\blacktriangleright\text{\small{\textit{preconditioned reward $\tilde{r}_\varphi$}}}
+\blacktriangleright\text{\small{\textit{$\kappa_t$-preconditioned reward $\tilde{r}_\varphi$}}}
 \label{precondrew}
 \end{align}
+$\forall t \in [0, T] \cap \mathbb{N},
+\forall (s_t, a_t) \in \mathcal{S} \times \mathcal{A}$,
 where $0 < \kappa_t \leq 1$, $\forall t \in [0, T] \cap \mathbb{N}$ (in any episode).
+
 We call $\kappa_t$ a \emph{reward preconditioner} since it functionally echoes the numerical transformation
 that conditions the tackled problem into a form that is more amenable to be solved via first-order optimization methods.
 Since our preconditioner is a scalar,
@@ -3752,36 +3750,67 @@ $\forall (s_t, a_t) \in \mathcal{S} \times \mathcal{A}$,
 we have $\tilde{r}_\varphi (s_t,a_t) \leq r_\varphi (s_t,a_t)$ whenever $r_\varphi (s_t,a_t) > 0$,
 and conversely,
 we have $\tilde{r}_\varphi (s_t,a_t) > r_\varphi (s_t,a_t)$ whenever $r_\varphi (s_t,a_t) < 0$.
-Applying such a preconditioner to $r_\varphi$ squashes the $r_\varphi$'s absolute value
+
+We posit that $\kappa_t$ does not depend on
+(\textit{i.e.}, is constant \textit{w.r.t.})
+the current state $s_t$ and action $a_t$:
+\begin{align}
+\dv*{\kappa_t}{s_t} = 0
+\qquad \text{and} \qquad
+\dv*{\kappa_t}{a_t} = 0
+\qquad
+\blacktriangleright\text{\small{\textit{property 1}}}
+\label{purplenopresent}
+\end{align}
+$\forall t \in [0, T] \cap \mathbb{N},
+\forall (s_t, a_t) \in \mathcal{S} \times \mathcal{A}$.
+Thus, we can write
+$\dv*{\tilde{r}_\varphi (s_t, a_t)}{s_t}
+= \kappa_t \dv*{r_\varphi (s_t, a_t)}{s_t}
++ \dv*{\kappa_t (s_t, a_t)}{s_t} r_\varphi
+= \kappa_t \dv*{r_\varphi (s_t, a_t)}{s_t}$,
+and similarly
+$\dv*{\tilde{r}_\varphi (s_t, a_t)}{a_t}
+= \kappa_t \dv*{r_\varphi (s_t, a_t)}{a_t}$.
+As such, we have
+$\lVert \nabla_{s,a}^t[\tilde{r}_\varphi]_t \rVert _F
+= \kappa_t \lVert \nabla_{s,a}^t[r_\varphi]_t \rVert _F$,
+hence
+$\lVert \nabla_{s,a}^t[\tilde{r}_\varphi]_t \rVert _F
+\leq \lVert \nabla_{s,a}^t[r_\varphi]_t \rVert _F$
+since $0 < \kappa_t \leq 1$, $\forall t \in [0, T] \cap \mathbb{N}$.
+Applying such a preconditioner to $r_\varphi$ therefore squashes the absolute value of $r_\varphi$
 and in effect \emph{shrinks} $r_\varphi$'s Lipschitz constant
---- assuming here, to build an intuition, that $r_\varphi$ is $\delta$-Lipschitz, with
-$\lVert \nabla_{s,a}^t[r_\varphi]_t \rVert _F \leq \delta < +\infty$ ---
+(assuming here that $r_\varphi$ is $\delta$-Lipschitz, with
+$\lVert \nabla_{s,a}^t[r_\varphi]_t \rVert _F \leq \delta < +\infty$)
 without regard to the sign of the signal.
-Formally, the definition of $\tilde{r}_\varphi$ in \textsc{eq}~\ref{precondrew} enables us to write the following,
-$\forall t \in [0, T] \cap \mathbb{N}$,
+Formally, since $\kappa_t$ is posited constant in $s_t$ and $a_t$, we have,
+$\forall t \in [0, T] \cap \mathbb{N}$
 and $\forall (s_t, a_t) \in \mathcal{S} \times \mathcal{A}$:
 \begin{align}
 \lVert \nabla_{s,a}^t[r_\varphi]_t \rVert _F \leq \delta
 \qquad \implies \qquad
-\lVert \nabla_{s,a}^t[\tilde{r}_\varphi]_t \rVert _F \leq \kappa_t \, \delta
-\: \leq \delta
+\lVert \nabla_{s,a}^t[\tilde{r}_\varphi]_t \rVert _F
+= \kappa_t \lVert \nabla_{s,a}^t[r_\varphi]_t \rVert _F
+\leq \kappa_t \, \delta
+\quad (\leq \delta)
 \label{kappalip}
 \end{align}
-In other words, if $r_\varphi$ is $\delta$-Lipschitz-continuous at $t$, then $\tilde{r}_\varphi$
-(defined as in \textsc{eq}~\ref{precondrew})
+That is, if $r_\varphi$ is $\delta$-Lipschitz-continuous at $t$, then $\tilde{r}_\varphi$
 is $\kappa_t \delta$-Lipschitz-continuous at $t$.
+Importantly,
 \textsc{eq}~\ref{kappalip} will be instrumental in proving the first stages of
-the theoretical results that we will report momentarily.
-In these, we rely on the definition of $\tilde{r}_\varphi$ laid out in \textsc{eq}~\ref{precondrew},
-and its counterpart action-value, denoted by $\widetilde{Q}_\varphi$.
+our next theoretical guarantees,
+in which we deal with the counterpart action-value of $\tilde{r}_\varphi$, denoted by $\widetilde{Q}_\varphi$.
 
 Because of its \textit{``reward-squashing''} effect,
-we name the add-on method corresponding to the subtitution of $r_\varphi$ with
+we name the method corresponding to the subtitution of $r_\varphi$ with
 the preconditioned reward $\tilde{r}_\varphi$
 \emph{``Pessimistic'' Reward Preconditioning Enforcing Lipschitzness}.
-We dub the plug-in technique \textbf{``PURPLE''} ---
-acronym, with minor vowel filling and letter shuffle for legibility and
-easy of pronunciation.
+We dub the plug-in technique \textbf{``PURPLE''}
+(it is an acronym, with minor vowel filling and letter shuffle for legibility and
+easy of pronunciation).
+
 We describe PURPLE's pseudo-code plugged into
 SAM (\cite{Blonde2019-vc}, \textit{cf.}~\textsc{Algorithm}~\ref{algosam})
 in \textsc{Algorithm}~\ref{algopurple}
@@ -3795,6 +3824,69 @@ omitting the various add-on techniques (\textit{e.g.} label smoothing)
 for legibility.
 The hyper-parameters that complement \textsc{Algorithm}~\ref{algopurple}
 are reported in \textsc{Appendix}~\ref{hps}.
+
+We now study how the injection of PURPLE in SAM impacts the theoretical guarantees we have previously derived in
+\textsc{Section}~\ref{theory}.
+Concretely, we derive the PURPLE counterparts of
+\textsc{Lemma}~\ref{lemma}, \textsc{Theorem}~\ref{theorem1},
+\textsc{Theorem}~\ref{theorem2}, and \textsc{Corollary}~\ref{corollary1}.
+In order for us to characterize the Lipschitzness of $\widetilde{Q}_\varphi$,
+we also posit that the introduced preconditioner does not depend on
+(\textit{i.e.}, is constant \textit{w.r.t.})
+the \emph{previously visited} (past) states and actions.
+Formally:
+\begin{align}
+\dv*{\kappa_{t+k+1}}{s_t} = 0
+\qquad \text{and} \qquad
+\dv*{\kappa_{t+k+1}}{a_t} = 0
+\qquad
+\blacktriangleright\text{\small{\textit{property 2}}}
+\label{purplenopast}
+\end{align}
+$\forall t \in [0, T] \cap \mathbb{N}, \forall k \in [0, T-t-1] \cap \mathbb{N},
+\forall (s_t, a_t) \in \mathcal{S} \times \mathcal{A}$.
+All in all, to develop the counterpart guarantees that will follow,
+the preconditioner $\kappa_t$ must possess the following properties:
+\begin{align}
+&\dv*{\kappa_t}{s_t} = 0 \quad \text{and} \quad \dv*{\kappa_t}{a_t} = 0
+\qquad
+\blacktriangleright\text{\small{\textit{property 1, \textsc{eq}~\ref{purplenopresent}}}}
+\nonumber \\
+&\qquad
+\blacktriangleright\text{\small{\textit{gave us \textsc{eq}~\ref{kappalip},
+itself used in the proof (step 1) of \textsc{Theorem}~\ref{theorem1purple} (a)+(b)}}}
+\nonumber \\
+&\dv*{\kappa_{t+k+1}}{s_t} = 0 \quad \text{and} \quad \dv*{\kappa_{t+k+1}}{a_t} = 0
+\qquad
+\blacktriangleright\text{\small{\textit{property 2, \textsc{eq}~\ref{purplenopast}}}}
+\nonumber \\
+&\qquad
+\blacktriangleright\text{\small{\textit{used in the proof of \textsc{Lemma}~\ref{lemmapurple},
+itself then used to prove (step 2) \textsc{Theorem}~\ref{theorem1purple} (a)+(b)}}}
+\nonumber
+\end{align}
+$\forall t \in [0, T] \cap \mathbb{N}, \forall k \in [0, T-t-1] \cap \mathbb{N},
+\forall (s_t, a_t) \in \mathcal{S} \times \mathcal{A}$.
+Note, the last two properties,
+\textsc{eq}~\ref{purplenopresent} and \textsc{eq}~\ref{purplenopast},
+can be condensed into,
+$\forall t \in [0, T] \cap \mathbb{N}, \forall k \in [0, T-t] \cap \mathbb{N},
+\forall (s_t, a_t) \in \mathcal{S} \times \mathcal{A}$:
+\begin{align}
+\dv*{\kappa_{t+k}}{s_t} = 0
+\qquad \text{and} \qquad
+\dv*{\kappa_{t+k}}{a_t} = 0
+\qquad
+\blacktriangleright\text{\small{\textit{property 1+2 condensed into one}}}
+\end{align}
+\paragraph{Property that $\kappa_t$ must have.}
+\textbf{\emph{In plain English,
+to get our guarantees,
+we need the preconditioner to not depend on neither
+current nor past states visited and actions taken by the agent.}}
+Note, the property $\kappa_t \leq 1$ is only ever used in \textsc{Section}~\ref{morerobust},
+and will not be leveraged anywhere else.
+The developed theory will still hold if $\exists t \in [0, T] \cap \mathbb{N}$ such that $\kappa_t > 1$.
 
 \IncMargin{1em}
 \begin{algorithm}
@@ -3901,12 +3993,6 @@ dubbed \textbf{``PURPLE''} (with minor vowel filling and letter shuffle for legi
 \end{algorithm}
 \DecMargin{1em}
 
-We now lay out how the injection of PURPLE in SAM impacts the theoretical guarantees derived in
-\textsc{Section}~\ref{theory}.
-Concretely, we derive the PURPLE \emph{counterparts} of
-\textsc{Lemma}~\ref{lemma}, \textsc{Theorem}~\ref{theorem1},
-\textsc{Theorem}~\ref{theorem2}, and \textsc{Corollary}~\ref{corollary1}.
-
 \begin{lemma}
 \label{lemmapurple}
 Let the MDP with which the agent interacts be deterministic,
@@ -3923,7 +4009,7 @@ This property is satisfied by the usual neural network function approximators.
 The ``almost-everywhere'' case can be derived from this lemma without major changes
 (relevant when at least one activation function is only differentiable almost-everywhere, ReLU).
 \textbf{\emph{(a)}} Under the previous assumptions,
-for $k \in [0, T-1] \cap \mathbb{N}$ the following \textbf{(non-recursive) inequality} is verified:
+for $k \in [0, T-k-1] \cap \mathbb{N}$ the following \textbf{(non-recursive) inequality} is verified:
 \begin{align}
 \lVert \nabla_{s,a}^t[\tilde{r}_\varphi]_{t+k+1} \rVert ^2_F
 &\leq
@@ -4356,12 +4442,12 @@ and \textsc{Theorem}~\ref{theorem2purple} instead of \textsc{Corollary}~\ref{cor
 to arrive at the same conclusion:
 $\widetilde{Q}_\varphi$ has a lower derived Lipschitz constant upper bound than $Q_\varphi$
 by a factor of $\kappa \leq 1$ and is therefore \emph{provably more robust} than $Q_\varphi$.
-In other words, employing the simple PURPLE reward preconditioning add-on to SAM has the effect of
+In other words, employing the simple PURPLE reward preconditioning to SAM has the effect of
 making the learned Q-value provably more robust.
 
 \subsubsection{Detached guide}
 
-Consider the following particular form for the preconditioner $\kappa_t$,
+Consider the following particular form for $\kappa_t$,
 $\forall t \in [0, T] \cap \mathbb{N},
 \forall (s_t, a_t) \in \mathcal{S} \times \mathcal{A}$:
 \begin{align}
@@ -4375,13 +4461,9 @@ $\forall t \in [0, T] \cap \mathbb{N},
 where $\alpha$ is an inverse temperature hyper-parameter involved in the definition of the kernel of
 the Boltzmann or Gibbs probability distribution $\kappa_t \coloneqq \exp (-\alpha \, \varepsilon_t)$,
 (hence $0 < \kappa_t \leq 1$), and where
-$\varepsilon_t \geq 0$ (\textit{for now}) depicts an arbitrary non-negative energy function.
-Albeit in the unit ball
-$\forall t \in [0, T] \cap \mathbb{N}$,
-$\forall (s_t, a_t) \in \mathcal{S} \times \mathcal{A}$, and aligned with the kernel of a
-probability distribution (Boltzmann or Gibbs),
-$\kappa_t$ is non-normalized and as such is \emph{not} a probability \textit{per se}.
-Nonetheless, it still echoes the proposensity or tendency of the state-action pair $(s_t,a_t)$
+$\varepsilon_t \geq 0$ for now depicts an arbitrary non-negative energy function.
+$\kappa_t$ is non-normalized, and as such, it is \emph{not} a probability \textit{per se}.
+Nonetheless, it still echoes the propensity or tendency of the state-action pair $(s_t,a_t)$
 to possess the property described by the non-negative energy $\varepsilon_t$, which we define momentarily.
 Low values of $\varepsilon_t \geq 0$
 will push the preconditioner towards the upper limit $\kappa_t \to 1$,
@@ -4390,6 +4472,15 @@ Equivalently, the preconditioned reward $\tilde{r}_\varphi$ will verify the appr
 $\tilde{r}_\varphi (s_t,a_t) \approx r_\varphi (s_t,a_t)$ whenever $\varepsilon_t$
 approaches zero (from above), and $\tilde{r}_\varphi (s_t,a_t) \approx 0$ whenever
 the energy $\varepsilon_t$ grows towards higher levels.
+Under this orchestration, we need
+$\dv*{\varepsilon_{t+k}}{s_t} = 0$ and $\dv*{\varepsilon_{t+k}}{a_t} = 0$
+to be satisfied
+$\forall t \in [0, T] \cap \mathbb{N}, \forall k \in [0, T-t] \cap \mathbb{N},
+\forall (s_t, a_t) \in \mathcal{S} \times \mathcal{A}$
+for the derived robustness guarantees to be readily applicable
+(we laid out the properties $\kappa_t$ must possess in \textsc{Section}~\ref{purpleandres},
+right before exposing \textsc{Lemma}~\ref{lemmapurple}).
+
 In particular,
 the soft approximate $\mathfrak{C}$-validity pseudo-indicator
 (\textit{cf.}~\textsc{eq}~\ref{pseudoindicator})
@@ -4407,32 +4498,42 @@ As such, in effect, the agent's policy $\mu_\theta$ is punished for selecting ac
 approximate $\mathfrak{C}$-validity condition above.
 Besides, it is punished in accordance to how far outside the allowed
 range, $[0,k]$, the norm of the Jacobian of $D_\varphi$ gets.
-Nonetheless, in this particular instance, the empirical observations made in \textsc{Section}~\ref{understand}
+Nonetheless, in this particular instance,
+the empirical observations we have made in \textsc{Section}~\ref{understand}
 attest to the fact that, provided the right choice of $\lambda$ scaling factor and $\zeta$ distribution
---- both characterizing complementarilly the gradient penalization,
+(both characterizing the gradient penalization),
 the approximate $\mathfrak{C}$-validity constraint $\lVert \nabla_{s,a}^t[D_\varphi]_t \rVert _F \leq k$
-can easily be satisfied $100\%$ of the time by regularizing $D_\varphi$ alone.
-For $D_\varphi$'s $k$-Lipschitzness to be ensured (validated empirically in \textsc{Section}~\ref{understand}),
-there is therefore no need to further artificially alter the rewards provided to the agent's policy $\mu_\theta$
-through PURPLE's pessimistic reward preconditioning add-on.
+can easily be satisfied $100\%$ of the time by \emph{only} regularizing $D_\varphi$.
+For $D_\varphi$'s $k$-Lipschitzness to be ensured,
+there is therefore no need to further alter the rewards provided to the agent's policy $\mu_\theta$
+through PURPLE's pessimistic reward preconditioning.
+Note, however, that under such a $\varepsilon_t$ formulation, we see that we clearly have
+$\dv*{\varepsilon_{t+k}}{s_t} \neq 0$ and $\dv*{\varepsilon_{t+k}}{a_t} \neq 0$,
+$\forall t \in [0, T] \cap \mathbb{N}, \forall k \in [0, T-t] \cap \mathbb{N},
+\forall (s_t, a_t) \in \mathcal{S} \times \mathcal{A}$.
+While this does not mean that the studied entities are not robust,
+it prevents us from applying our derived results to guarantee such robustness.
+Still, without the full premise, they are not applicable.
+
 Generally speaking, we will probably make the same observation whenever $\varepsilon_t$ is defined from a constraint
 we want to enforce on a learned function approximation, for regularization purposes.
 Indeed, verifying said desideratum on the function approximator directly via the application of a regularizer seems
 to always be the easiest (since most direct) solution to encourage the satisfaction of a constraint on
 a \emph{differentiable} function (\textit{e.g.}~$D_\varphi$, $\mu_\theta$).
 Constraints involving the Jacobian of a (\textit{a fortioni} differentiable) function of the learned system
-(\textit{e.g.}~$\lVert \nabla_{s,a}^t[D_\varphi]_t \rVert _F \leq k$ in this work)
+(\textit{e.g.}~$\lVert \nabla_{s,a}^t[D_\varphi]_t \rVert _F \leq k$)
 is a particular case of the general class of constraints for which \emph{direct} regularization is
 \textit{a priori} prefereable to an analogous reward shaping as dictated by \textsc{eq}~\ref{precondrewexp}.
 On the flip side, due to the fact that the reward --- albeit learned as a parametric function ---
 is treated as an input in our computational graph,
 it is not differentiated through and \emph{can} consequently
-be augmented with non-differentiable nodes through the design of $\varepsilon_t$ from \textsc{eq}~\ref{precondrewexp}.
+be augmented with non-differentiable nodes through the design of $\varepsilon_t$.
 In other words, even if it is preferable to apply regularization directly the objective of the regularized
 function approximator for it to satisfy some constraint,
 it might not always be possible to do so directly.
 In that case, guiding the policy towards areas of the state-action landscape that satisfy said constraint
 could be a surrogate solution, albeit far less preferable than acting on the targeted approximator directly.
+
 As such, by aligning $\varepsilon_t$ with said constraint, \textsc{eq}~\ref{precondrewexp} offers a way for the policy
 to act in view of the satisfaction of said constraint \emph{while} enjoying the considerable advantage
 of being able to treat $\varepsilon_t$ as a \emph{black box}.
@@ -4442,7 +4543,7 @@ We will leverage this \emph{universality} in the next discussion point.
 \label{partialcompensate}
 
 In reaction to the theoretical robustness guarantees derived in
-\textsc{Theorem} \ref{theorem2} and \textsc{Corollary} \ref{corollary1},
+\textsc{Theorem}~\ref{theorem2} and \textsc{Corollary}~\ref{corollary1},
 we have discussed earlier in \textsc{Section}~\ref{compoundvars} that,
 if the variations \emph{in space} of the policy or the dynamics are large
 in the early stage of an episode (\textit{i.e.}~when $0 \leq t \ll T$),
@@ -4477,30 +4578,27 @@ $\forall t \in [0, T] \cap \mathbb{N},
 \forall (s_t, a_t) \in \mathcal{S} \times \mathcal{A}$,
 $\lVert\nabla_{s,a}^t[f]_t\rVert _\infty \leq A$
 and $\lVert\nabla_s^t[\mu]_t\rVert _\infty \leq B$.
-We do not tackle $A_t$ and $B_t$, the respective time-dependent counterparts of $A$ and $B$ that we introduced
-in \textsc{Lemma}~\ref{lemma} \textit{(a)}, \textit{w.l.o.g}.
-As such, in line with the problem we set out to address --- devise a way to limit the magnitude of $C$,
-we adjust our focus to devising ways to limit the respective magnitudes of the $A$ and $B$ majorants.
+As such, to devise a way to limit the magnitude of $C$,
+we seek ways to limit the respective magnitudes of the $A$ and $B$ majorants.
 Similarly to the learned surrogate reward core $D_\varphi$, the policy $\mu_\theta$
 followed by the agent (of which $\mu$ is a placeholder) is learned as a parametric
 function approximator, enabling us to tame $B$ by applying a gradient penalty regularizer
 \emph{directly} on the policy (exactly like we already do to ensure that $D_\varphi$
-remains $k$-Lipschitz and equivalently
-satisfies $\lVert \nabla_{s,a}^t[D_\varphi]_t \rVert _F \leq k$).
+remains $k$-Lipschitz-continuous).
 
 By contrast, we can not tame $A$ the same way (via direct regularization applied onto $f$),
 due to the transition function $f$ of the world (whether real or simulated)
-being a \emph{black box} that we can not even query at will.
+being a black box that we can not even query at will.
 Not only is $f$ non-differentiable (the real world never is; non-trivial simulated worlds virtually never are),
 but we also can \emph{not} evaluate it at \textit{any state-action pair whenever we want}.
 Our desideratum then ultimately boils down to finding a way to keep $A$ in check,
-since the usual candidate to enforce Lipschitz-continuity (applying a regularizer on the Jacobian directly) ---
+since the usual candidate to enforce Lipschitzness (applying a regularizer on the Jacobian directly) ---
 which is the preferable option by far for $D_\varphi$ and $\mu_\theta$ ---
 is out of the question for $f$, as we have established.
-Despite the fact that, by nature, we can not change $f$ in the MDP $\mathbb{M}$ that we formally defined
-in \textsc{Section}~\ref{prelim}, we \emph{can} change the transition function $f'$ that
+Despite the fact that, by nature, we can not change $f$ in the MDP $\mathbb{M}$,
+we \emph{can} change the transition function $f'$ that
 effectively takes the place of $f$ in practice
-and underlies the effective observed MDP $\mathbb{M}'$ by urging the agent's policy $\mu_\theta$ to avoid
+and underlies the effectively observed MDP $\mathbb{M}'$ by urging the agent's policy $\mu_\theta$ to avoid
 areas of the state-action landscape $\mathcal{S} \times \mathcal{A}$
 that display high $\lVert\nabla_{s,a}^t[f']_t\rVert _\infty$ values.
 In fact, $f'$ changes continually ($f'$ is non-stationary)
@@ -4513,6 +4611,7 @@ As such, we can keep $A$ in check by keeping $\lVert\nabla_{s,a}^t[f']_t\rVert _
 which can be approximately achieved by keeping $\lVert\nabla_{s,a}^t[f_\psi]_t\rVert _\infty$ in check,
 where $f_\psi : \mathcal{S} \times \mathcal{A} \to \mathcal{S}$
 is a learned functional approximation of the effective dynamics $f'$.
+
 \textit{In fine},
 we urge the constraint $\lVert\nabla_{s,a}^t[f]_t\rVert _\infty \leq A$ to be satisfied
 by encouraging $\mu_\theta$ to avoid areas where $\lVert\nabla_{s,a}^t[f_\psi]_t\rVert _\infty$
@@ -4520,32 +4619,23 @@ is high, which itself can be relaxed into $\lVert\nabla_{s,a}^t[f_\psi]_t\rVert 
 Note, even if $f_\psi$ is differentiable, regularizing it via gradient penalization does \emph{not}
 have any effect on the value of $\lVert\nabla_{s,a}^t[f']_t\rVert _\infty$,
 since the agent does \emph{not} interact with $f_\psi$, but with $f'$.
-
-Crucially, for our line of reasoning to hold, we want $\lVert\nabla_{s,a}^t[f_\psi]_t\rVert _F$ to be
+For our line of reasoning to hold, we want $\lVert\nabla_{s,a}^t[f_\psi]_t\rVert _F$ to be
 a high-fidelity depiction of $\lVert\nabla_{s,a}^t[f']_t\rVert _\infty$.
-Enforcing \emph{any} Lipschitzness-inducing regularization on $f_\psi$ would fatally hinder
-this desideratum.
+
 We maintain the parametric model $f_\psi$
 because it allows us to approximate the norm of the Jacobian of the dynamics
-\emph{wherever} we want, \emph{whenever} we want.
-In order for $\mu_\theta$ to avoid areas where $\lVert\nabla_{s,a}^t[f_\psi]_t\rVert _F$,
-we leverage the \emph{universal} preconditioner form exhibited in \textsc{eq}~\ref{precondrewexp}.
+wherever we want, whenever we want.
+In order for $\mu_\theta$ to avoid areas where $\lVert\nabla_{s,a}^t[f_\psi]_t\rVert _F$ is high,
+we leverage the universal preconditioner form exhibited in \textsc{eq}~\ref{precondrewexp}.
 Concretely, we reward the agent \emph{less} for
 \emph{not} navigating areas of $\mathcal{S} \times \mathcal{A}$ that satisfy the constraint
 $\lVert\nabla_{s,a}^t[f_\psi]_t\rVert _F \leq \tau$.
 The Lipschitz constant $\tau$ we want to enforce onto $f_\psi$ is a hyper-parameter that must be tuned,
 like $k$ for $D_\varphi$.
-Note, since $f_\psi$ returns \emph{vectors},
-we use the Frobenius norm
-$\lVert\cdot\rVert _F$
-to wrap the Jacobian of $f_\psi$
-(unlike $D_\varphi$, which returns scalars).
 We push $\mu_\theta$ towards areas where $\lVert\nabla_{s,a}^t[f_\psi]_t\rVert _F \leq \tau$
---- \textit{i.e.}~where $f_\psi$ is $\tau$-Lipschitz-continuous ---
+(where $f_\psi$ is $\tau$-Lipschitz-continuous, thereby also satisfying the premise of the guarantees)
 by defining the energy function $\varepsilon_t^\psi$ in the
-\emph{model-based} preconditioner $\kappa_t^\psi$ as a one-sided gradient penalty, as follows,
-$\forall t \in [0, T] \cap \mathbb{N},
-\forall (s_t, a_t) \in \mathcal{S} \times \mathcal{A}$:
+\emph{model-based} preconditioner $\kappa_t^\psi$ as a one-sided gradient penalty, as follows:
 \begin{align}
 \tilde{r}_\varphi^\psi (s_t,a_t)
 \coloneqq \kappa_t^\psi \, r_\varphi (s_t,a_t)
@@ -4566,6 +4656,8 @@ $\forall t \in [0, T] \cap \mathbb{N},
 \, r_\varphi (s_t,a_t)
 \label{precondrewf2}
 \end{align}
+$\forall t \in [0, T] \cap \mathbb{N},
+\forall (s_t, a_t) \in \mathcal{S} \times \mathcal{A}$,
 where
 $\sigma_\textsc{on}^\psi$ denotes an online, running estimate of
 the standard deviation of
@@ -4585,6 +4677,31 @@ Conversely, in the extreme scenario where $\varepsilon_t^\psi$ is very large
 (\textit{i.e.}~$\lVert\nabla_{s,a}^t[f_\psi]_t\rVert _F \gg \tau$),
 $\kappa_t^\psi$ is approximately equal to $0$,
 and $\tilde{r}_\varphi (s_t,a_t) \approx 0$.
+
+Looking at the model-based instantiation of PURPLE laid out in \textsc{eq}~\ref{precondrewf1},
+and specifically of the form exhibited in \textsc{eq}~\ref{tildeqlip},
+we see that the energy $\varepsilon_t^\psi$ depends on the current state $s_t$ and action $a_t$.
+Indeed, from the definitions of $\varepsilon_t^\psi$ and $\kappa_t^\psi$, we immediately see that
+$\dv*{\varepsilon_{t+k}^\psi}{s_t} \neq 0$ and $\dv*{\varepsilon_{t+k}^\psi}{a_t} \neq 0$,
+which direclty leads to
+$\dv*{\kappa_{t+k}^\psi}{s_t} \neq 0$ and $\dv*{\kappa_{t+k}^\psi}{a_t} \neq 0$,
+$\forall t \in [0, T] \cap \mathbb{N}, \forall k \in [0, T-t] \cap \mathbb{N},
+\forall (s_t, a_t) \in \mathcal{S} \times \mathcal{A}$.
+As such,
+the crafted preconditioner does not satisfy the eligibily conditions
+for the derived theoretical guarantees to be applicable,
+which were represented in condensed form in \textsc{Section}~\ref{purpleandres},
+right before exposing \textsc{Lemma}~\ref{lemmapurple}.
+If we had used the \emph{supremum} Frobenius norm
+$\lVert\nabla_{s,a}^t[f_\psi]_t\rVert _\infty$
+to formulate $\varepsilon_t^\psi$ instead of relaxing it to
+$\lVert\nabla_{s,a}^t[f_\psi]_t\rVert _F$, its non-supremum counterpart,
+$\varepsilon_t^\psi$ would \emph{not} depend on $s_t$ and $a_t$ (or any visited state or picked action),
+and our robustness guarantees would be readily applicable.
+Still, such a supremum Frobenius norm is intractable in practice.
+In order for us to be able to evaluate the developed prototype empirically,
+we resorted to the obvious tractable relaxation consisting in simply dropping the supremum altogether
+for this diagnostics-oriented case.
 
 Now that we have laid out how the pessimistic model-based preconditioner $\kappa_t^\psi$ impacts the reward
 received by the agent artificially upon interaction, we consider how this preconditioning affects the
@@ -4626,73 +4743,11 @@ that we were able to secure by proposing the model-based pessimistic reward prec
 can be tuned extensively in practice
 to achieve the desired level of compensation.
 We used $\kappa_\text{min} = 0.7$, $\alpha = 1$, and $\tau \in \{6,7\}$ in the experiments
-we conducted to showcase how the proposed model-based reward preconditioning tackled above can help us
-achieve our robustness desiderata. It does so by taming the remaining \textit{``free''} pieces of the system ---
-even if they are black boxes, \textit{i.e.} the dynamics of the world the agent interacts with.
+we conducted to showcase how the proposed model-based reward preconditioning laid out above can help us
+achieve our robustness desideratum.
 
-Since we aim to \textit{showcase} its potential benefits, as opposed to convince the reader to plug this
-add-on preconditioning method in every future architecture, we conducted \textit{illustrative} experiments
-only in the \texttt{Hopper} environment (neither the easiest, nor the hardest among the ones
-considered, \textit{cf.}~\textsc{Table}~\ref{envtable}).
-Note, when it comes to $D_\varphi$'s gradient penalty regularization,
-we use the default $\zeta$ and $\lambda$ (\textit{cf.}~\textsc{Section}~\ref{gradpenrl}):
-the directed $\zeta$ distribution of WGAN-GP, with $\lambda=10$ as scaling factor.
-Since the evaluated policy is penalized for navigating areas of $\mathcal{S} \times \mathcal{A}$ where
-$\lVert\nabla_{s,a}^t[f_\psi]_t\rVert _F > \tau$, we monitor
-$G \coloneqq \lVert\nabla_{s,a}^t[f_\psi]_t\rVert _F$.
-We expect to observe \emph{lower} values of $G$ when using the studied preconditioning.
-In order to grasp the extent to which variations can compound in the system,
-and therefore highlight the need for mechanims allowing the main method to contain such compounding of variations
-(like the proposed one),
-we also monitor an approximation of $\gamma^2 C$, relaxed as
-$H \coloneqq \gamma^2 \lVert\nabla_{s,a}^t[f_\psi]_t\rVert _F^2 \max (1, \lVert\nabla_s^t[\mu_\theta]_t\rVert _F^2)$.
-We expect to see the same ranking of methods in the plots depicting $G$ and $H$ respectively.
-These are all reported in \textsc{Figure}~\ref{purplepsi}.
-Note, the steep surge in overall computational cost caused by the evaluation of the monitored metrics
-($G$ and $H$) and expecially $\kappa_t^\psi$ lowered the number of iterations our agent could do in the allowed runtime.
-As such, we increased said runtime from the usual 0.5-day or 2-day duration to a 4-day duration (or 96 hours)
---- more costly to orchestrate, hence the sparser array of experiments to offset the steeper cost in compute.
-In \textsc{Figure}~\ref{purplepsi},
-we observe that, at evaluation time,
-the PURPLE add-on of \textsc{eq}~\ref{precondrewf1} and \ref{precondrewf2}
-indeed enables the agent to achieve \emph{lower} values of $G$ and $H$,
-while the \emph{same} episodic return.
-Said differently, it seems that the agent --- with the add-on, compared to the one without ---
-achieves the same proficiency, with the same convergence speed, while making decisions
-that are \emph{safer} in terms of incurred variations of the approximate dynamics $f_\psi$.
-\textbf{\emph{
-So, even if the add-on is not needed to reach a higher return (or reach it faster) \textit{per se},
-we have showcased that the studied model-based reward preconditioning can increase the robustness of the main method
-by augmenting it with the means to tame \textit{a priori} untamable entities in the system (here, the dynamics).
-}}
-Still, the studied model-based instantiation of PURPLE is set back by several drawbacks.
-\textit{a)} We need to maintain a forward model $f_\psi$ that approximates the effective transition function $f'$.
-\textit{b)} To be estimated, $\kappa_t^\psi$ requires explicit calls to an automatic differentiation library,
-making its frequent computation (every time a mini-batch is sampled from the replay buffer) extremely expensive overall.
-\textit{c)} The threshold $\tau$ (to be enforced as Lipschitz constant for $f_\psi$) must be set such that
-\emph{not every} decision made by the agent is penalized, while making sure it is still strict enough in that respect.
-Besides, we observed in practice that the range of values taken by $\lVert\nabla_{s,a}^t[f_\psi]_t\rVert _F$
-varies greatly across environments.
-As such, $\tau$ must be tuned carefully per environment, making the overall process
-tedious and computationally expensive.
-In effect, this brings us back to the original issues of reward shaping \cite{Ng1999-lv},
-that adversarial IL \cite{Ho2016-bv} circumvented.
-
-\begin{figure}[H]
+\begin{figure}
   \center
-  \begin{subfigure}[t]{0.33\textwidth}
-    \center\scalebox{0.16}[0.16]{\includegraphics{Plots/purple_f_psi_hopper/plots_eval_env_ret_plot.pdf}}
-    % \caption{}
-  \end{subfigure}
-  \begin{subfigure}[t]{0.33\textwidth}
-    \center\scalebox{0.16}[0.16]{\includegraphics{Plots/purple_f_psi_hopper/plots_mod_2_plot.pdf}}
-    % \caption{}
-  \end{subfigure}
-  \begin{subfigure}[t]{0.33\textwidth}
-    \center\scalebox{0.16}[0.16]{\includegraphics{Plots/purple_f_psi_hopper/plots_gamma2c_plot.pdf}}
-    % \caption{}
-  \end{subfigure}
-  %
   \begin{subfigure}[t]{0.33\textwidth}
     \center\scalebox{0.16}[0.16]{\includegraphics{Plots/purple_f_psi_hopper/plots_eval_env_ret_barplot.pdf}}
     \caption{Return values \textit{(higher is better)}}
@@ -4715,7 +4770,6 @@ that adversarial IL \cite{Ho2016-bv} circumvented.
   (\textit{cf.} \textsc{Algorithm}~\ref{algosam}),
   augmented with
   the \emph{model-based} instantiation of PURPLE
-  (\textit{cf.} \textsc{Algorithm}~\ref{algopurple})
   whose template is laid out in
   \textsc{eq}~\ref{precondrewf1} and \ref{precondrewf2},
   with $\tau=7$ and $\tau=6$ respectively.
@@ -4727,13 +4781,61 @@ that adversarial IL \cite{Ho2016-bv} circumvented.
   \label{purplepsi}
 \end{figure}
 
+Since we aim to \textit{showcase} its potential benefits, as opposed to convince the reader to plug this
+preconditioning method in every future architecture, we conducted \textit{illustrative} experiments
+only in the \texttt{Hopper} environment (neither the easiest, nor the hardest among the ones
+considered, \textit{cf.}~\textsc{Table}~\ref{envtable}).
+Note, when it comes to $D_\varphi$'s gradient penalty regularization,
+we use the default $\zeta$ and $\lambda$ (\textit{cf.}~\textsc{Section}~\ref{gradpenrl}):
+the directed $\zeta$ distribution of WGAN-GP, with $\lambda=10$ as scaling factor.
+Since the evaluated policy is penalized for navigating areas of $\mathcal{S} \times \mathcal{A}$ where
+$\lVert\nabla_{s,a}^t[f_\psi]_t\rVert _F > \tau$, we monitor
+$G \coloneqq \lVert\nabla_{s,a}^t[f_\psi]_t\rVert _F$.
+We expect to observe \emph{lower} values of $G$ when using the studied preconditioning.
+In order to grasp the extent to which variations can compound in the system,
+and therefore highlight the need for mechanims allowing the main method to contain such compounding of variations
+(like the proposed one),
+we also monitor an approximation of $\gamma^2 C$, relaxed as
+$H \coloneqq \gamma^2 \lVert\nabla_{s,a}^t[f_\psi]_t\rVert _F^2 \max (1, \lVert\nabla_s^t[\mu_\theta]_t\rVert _F^2)$.
+We expect to see the same ranking of methods in the plots depicting $G$ and $H$ respectively.
+These are all reported in \textsc{Figure}~\ref{purplepsi}.
+
+Note, the steep surge in overall computational cost caused by the evaluation of the monitored metrics
+($G$ and $H$) and expecially $\kappa_t^\psi$ lowered the number of iterations our agent could do in the allowed runtime.
+As such, we increased said runtime from the usual 0.5-day or 2-day duration to a 4-day duration (or 96 hours)
+Such runs are more costly to orchestrate,
+hence the sparser array of experiments to offset the steeper cost in compute.
+In \textsc{Figure}~\ref{purplepsi},
+we observe that, at evaluation time,
+the model-based PURPLE instantiation in \textsc{eq}~\ref{precondrewf1} and \ref{precondrewf2}
+indeed enables the agent to achieve \emph{lower} values of $G$ and $H$,
+with the \emph{same} episodic return.
+Said differently, it seems that the agent --- with preconditioning, compared to the one without ---
+achieves the same proficiency, with the same convergence speed, while making decisions
+that are \emph{safer} in terms of incurred variations of the approximate dynamics $f_\psi$.
+\textbf{\emph{
+So, even if the preconditioner is not needed to reach a higher return (or reach it faster) \textit{per se},
+we have showcased that the studied model-based reward preconditioning can increase the robustness of the main method
+by augmenting it with the means to tame \textit{a priori} untamable entities in the system (here, the dynamics).
+}}
+Still, the studied model-based instantiation of PURPLE is set back by several drawbacks.
+\textit{a)} We need to maintain a forward model $f_\psi$ that approximates the effective transition function $f'$.
+\textit{b)} To be estimated, $\kappa_t^\psi$ requires explicit calls to an automatic differentiation library,
+making its frequent computation (every time a mini-batch is sampled from the replay buffer) extremely expensive overall.
+\textit{c)} The threshold $\tau$ (to be enforced as Lipschitz constant for $f_\psi$) must be set such that
+\emph{not every} decision made by the agent is penalized, while making sure it is still strict enough in that respect.
+Besides, we observed in practice that the range of values taken by $\lVert\nabla_{s,a}^t[f_\psi]_t\rVert _F$
+varies greatly across environments.
+As such, $\tau$ must be tuned carefully per environment, making the overall process
+tedious and computationally expensive.
+In effect, this brings us back to the original issues of reward shaping \cite{Ng1999-lv},
+that adversarial IL \cite{Ho2016-bv} circumvented.
+
 \subsubsection{Total compensation of compounding variations}
 
 Inspired by the insight laid out in \textsc{Remark}~\ref{remarkpurple},
 we derive theoretical guarantees that characterize the robustness of $\widetilde{Q}_\varphi$
-when using a preconditioner defined as,
-$\forall t \in [0, T] \cap \mathbb{N}$, and
-$\forall k \in [0, T-t] \cap \mathbb{N}$:
+when using a preconditioner defined as follows:
 \begin{align}
 \kappa_{t+k} \coloneqq
 \frac{1}{\sqrt{\prod_{u=0}^{k-1} C_{t+u}}}
@@ -4743,12 +4845,26 @@ $\forall k \in [0, T-t] \cap \mathbb{N}$:
 \max \big(1, \lVert\nabla_s^{v+1}[\mu]_{v+1}\rVert _\infty^2\big)
 \label{complexkappa}
 \end{align}
-Note, the property $\kappa_t \leq 1$ is only ever used in \textsc{Section}~\ref{morerobust},
+$\forall t \in [0, T] \cap \mathbb{N}$, and
+$\forall k \in [0, T-t] \cap \mathbb{N}$.
+Since the norms involved in $C_v$ are \emph{supremum} ones,
+the preconditioner $\kappa_t$ verifies
+$\dv*{\kappa_{t+k}}{s_t} = 0$ and
+$\dv*{\kappa_{t+k}}{a_t} = 0$,
+$\forall t \in [0, T] \cap \mathbb{N},
+\forall k \in [0, T-t] \cap \mathbb{N},
+\forall (s_t, a_t) \in \mathcal{S} \times \mathcal{A}$.
+The reward preconditioner therefore verifies the properties
+one must satisfy for the derived robustness guarantees to be applicable
+(\textit{cf.}~\textsc{Section}~\ref{purpleandres}).
+Again, note, the property $\kappa_t \leq 1$ is only ever used in \textsc{Section}~\ref{morerobust},
 and has not been leveraged anywhere else.
-Given that the developed theory still hold if $\exists t \in [0, T] \cap \mathbb{N}$ such that $\kappa_t > 1$,
+Given that the developed theory still holds if $\exists t \in [0, T] \cap \mathbb{N}$ such that $\kappa_t > 1$,
 the fact that the preconditioner defined in \textsc{eq}~\ref{complexkappa} does not necessarily lie in
-the $(0,1]$ interval is not an issue \textit{a priori}. Nonetheless, in practice,
-such preconditioner will virtually always be below $1$.
+the $(0,1]$ interval is not an issue \textit{a priori}.
+Still, in practice,
+it will virtually always be below $1$.
+
 We now derive the associated counterparts of
 \textsc{Theorem}~\ref{theorem2purple} and \textsc{Corollary}~\ref{corollary1purple}.
 

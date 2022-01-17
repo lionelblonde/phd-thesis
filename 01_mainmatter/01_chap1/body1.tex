@@ -234,8 +234,9 @@ the MDPs involved in our experiments are \textit{episodic},
 with $\gamma = 0$ at episode termination.
 In the theory, whenever we omit the discount factor, we implicitly assume the
 existence of an absorbing state along any agent-generated trajectory.
+
 We formalise the sequential decision making process of the agent by defining a
-parameterised policy $\pi_\theta$, modelled via a neural network with parameter
+policy $\pi_\theta$, modelled via a neural network with parameter
 $\theta$.
 $\pi_\theta(a_t|s_t)$ designates the conditional probability density
 concentrated at action $a_t$ when the agent is in state $s_t$.
@@ -273,16 +274,25 @@ return from the start state, which constitutes our performance objective,
 $J(\pi) \coloneqq \mathbb{E}_\pi[R_0^\gamma]$,
 i.e.~$\pi_\theta = \argmax_\pi \, J(\pi)$,
 for any given start state $s_0 \sim \rho_0$.
+
 To ease further notations, we finally introduce the
-\textit{discounted state visitation distribution}
-of a policy $\pi$, denoted by $\rho^\pi: \mathcal{S} \to [0,1]$, and defined by
-$\rho^\pi(s) \coloneqq
-\sum_{t=0}^{+\infty} \gamma^t \mathbb{P}_{\rho_0, \pi}[s_t = s]$,
-where $\mathbb{P}_{\rho_0, \pi}[s_t = s]$
-is the probability of arriving at state $s$ at time step $t$ when
-sampling the initial state from $\rho_0$ and thereafter following policy $\pi$.
+\textit{discounted state visitation frequency}
+of a policy $\pi$ in the MDP $\mathbb{M}$,
+denoted by $\rho^\pi_\mathbb{M}$, and abbreviated $\rho^\pi$ when non-ambiguous.
+Formally, it is defined by
+$\rho^\pi_\mathbb{M} (s)
+\coloneqq
+\sum_{t=0}^{+\infty} \gamma^t \mathbb{P}^\pi_\mathbb{M} [S_t=s]$,
+where $\mathbb{P}^\pi_\mathbb{M} [S_t=s]$ is the probability of reaching state $s$
+at timestep $t$ ($S_t$ is a random variable)
+when sampling the initial state from $\rho_0$, and thereafter following policy $\pi$ in $\mathbb{M}$.
+Given that a simple derivation gives $\sum_{s \in \mathcal{S}} \rho^\pi_\mathbb{M}(s) = 1 / (1-\gamma)$,
+the frequency
+$\rho^\pi_\mathbb{M}$ can be interpreted as a \textit{probability distribution} over states up to a constant factor.
 In our experiments, we omit the discount factor  for state visitation, in line
 with common practices.
+
+
 
 \subsection*{Generative Adversarial Imitation Learning}
 
